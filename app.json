@@ -1,0 +1,10 @@
+{
+  "name": "Yandex Dialogs",
+  "description": "Yandex Dialogs Collection",
+  "keywords": [
+    "yandex-dialogs",
+    "go"
+  ],
+  "website": "http://github.com/mrmigles/yandex-dialogs",
+  "repository": "http://github.com/mrmigles/yandex-dialogs"
+}
