@@ -15,7 +15,7 @@ import (
 var (
 	serveHost = flag.String("serve_host", getEnv("SERVER_HOST", ""),
 		"Host to serve requests incoming to Instagram Provider")
-	servePort = flag.String("serve_port", getEnv("SERVER_PORT", "8080"),
+	servePort = flag.String("serve_port", getEnv("PORT", "8080"),
 		"Port to serve requests incoming to Instagram Provider")
 	g errgroup.Group
 
