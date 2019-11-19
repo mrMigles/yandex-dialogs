@@ -22,7 +22,7 @@ type Dialog interface {
 	// Returns func which takes incoming Alice request and prepared response with filled `session` information. Response should be returned.
 	HandleRequest() func(request *alice.Request, response *alice.Response) *alice.Response
 
-	// Returns related path of your dialog. For example, `api/dialogs/sample-dialog`
+	// Returns base path of your dialog REST API. For example, `/api/dialogs/sample-dialog`
 	GetPath() string
 }
 
