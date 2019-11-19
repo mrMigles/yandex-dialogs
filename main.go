@@ -3,15 +3,23 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/azzzak/alice"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"golang.org/x/sync/errgroup"
 	"log"
 	"net/http"
 	"os"
+	"yandex-dialogs/masha"
 	"yandex-dialogs/phrases_generator"
 	"yandex-dialogs/voice_mail"
 )
+
+// 1. Implement your handler complying this interface
+type Dialog interface {
+	HandleRequest() func(request *alice.Request, response *alice.Response) *alice.Response
+	GetPath() string
+}
 
 var (
 	serveHost = flag.String("serve_host", GetEnv("SERVER_HOST", ""),
@@ -19,10 +27,16 @@ var (
 	servePort = flag.String("serve_port", GetEnv("PORT", "8080"),
 		"Port to serve requests incoming to Instagram Provider")
 	g errgroup.Group
-
-	voiceMail        = voice_mail.VoiceMail{}
-	phrasesGenerator = phrases_generator.PhrasesGenerator{}
 )
+
+// 2. Just add your implementation here
+func buildHandlers() []Dialog {
+	var dialogs []Dialog
+	dialogs = append(dialogs, phrases_generator.NewDialog())
+	dialogs = append(dialogs, voice_mail.VoiceMail{})
+	dialogs = append(dialogs, masha.NewMasha())
+	return dialogs
+}
 
 func main() {
 	mainEndpoints := &http.Server{
@@ -39,24 +53,19 @@ func main() {
 	}
 }
 
-// Just add Handler here
 func handler() http.Handler {
 	r := mux.NewRouter()
 	handler := Handler()
 
-	// Voice Mail
-	r.Handle("/api/dialogs/voice-mail",
-		handlers.LoggingHandler(
-			os.Stdout,
-			handler(handleRequest(voiceMail.HandleRequest()))),
-	).Methods("POST", "OPTIONS")
+	dialogs := buildHandlers()
 
-	// Phrases Generator
-	r.Handle("/api/dialogs/phrases-generator",
-		handlers.LoggingHandler(
-			os.Stdout,
-			handler(handleRequest(phrasesGenerator.HandleRequest()))),
-	).Methods("POST", "OPTIONS")
+	for _, v := range dialogs {
+		r.Handle(v.GetPath(),
+			handlers.LoggingHandler(
+				os.Stdout,
+				handler(handleRequest(v.HandleRequest()))),
+		).Methods("POST", "OPTIONS")
+	}
 
 	return JsonContentType(handlers.CompressHandler(r))
 }
