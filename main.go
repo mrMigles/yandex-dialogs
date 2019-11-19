@@ -16,7 +16,7 @@ import (
 	"yandex-dialogs/voice_mail"
 )
 
-// 1. Implement your handler (dialog) complying this interface
+// 1. Implement your handler (dialog) complying this interface. Put implementation in separated folder/package.
 type Dialog interface {
 
 	// Returns func which takes incoming Alice request and prepared response with filled `session` information. Response should be returned.
