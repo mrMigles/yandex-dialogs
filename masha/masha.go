@@ -1,6 +1,7 @@
 package masha
 
 import (
+	"fmt"
 	"github.com/azzzak/alice"
 	"io/ioutil"
 	"log"
@@ -32,9 +33,14 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 
 		text := request.Text()
 		if request.Session.New == true {
-			text = helloSentences[rand.Intn(len(helloSentences))]
+			answer := helloSentences[rand.Intn(len(helloSentences))]
+			response.Text(fmt.Sprintf("%s! Давай поболтаем?", answer))
+			return response
 		} else if text == "всё" || text == "закончили" || strings.HasPrefix(text, "хватит") || strings.HasPrefix(text, "выключи") {
 			response.Response.EndSession = true
+		} else if strings.EqualFold(text, "помощь") || strings.EqualFold(text, "что ты умеешь") || strings.Contains(text, "ты умеешь") {
+			response.Text("Меня зовут Маша. Я интерактивный бот собеседеник. Просто спроси меня что нибудь, и давай поболтаем. Если устанешь от меня, просто скажи - всё или - хватит болтать.")
+			return response
 		}
 		answer := v.getAnswer(request, text)
 
