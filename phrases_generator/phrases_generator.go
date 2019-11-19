@@ -37,37 +37,118 @@ func NewDialog() PhrasesGenerator {
 func (v PhrasesGenerator) HandleRequest() func(request *alice.Request, response *alice.Response) *alice.Response {
 	return func(request *alice.Request, response *alice.Response) *alice.Response {
 
+		if request.Session.New == true {
+			currentState := State{
+				action: "ask",
+				word:   "",
+				last:   "",
+			}
+			//v.mux.Lock()
+			//defer v.mux.Unlock()
+			v.states[request.Session.UserID] = currentState
+			response.Text("Здравствуйте! Просто произнесите слово, и я придумаю заголовок с этим словом.")
+			return response
+		}
+
+		if strings.Contains(request.Text(), "помощь") || strings.Contains(request.Text(), "ты умеешь") {
+			currentState := State{
+				action: "ask",
+				word:   "",
+				last:   "",
+			}
+			//v.mux.Lock()
+			//defer v.mux.Unlock()
+			v.states[request.Session.UserID] = currentState
+			response.Text("Я могу придумывать заголовки для названного слова. Для того, чтобы начать просто назовите" +
+				" слово. Если вы хотите прослушать заголовок ещё раз, просто скажите - повтори, если хотите услышать другой " +
+				"заголовок к вашему слову, то скажите - ещё, а если хотите указать новое слово, то скажите - новое слово. " +
+				"Когда надоест, просто скажите - хватит.")
+			return response
+		}
+
+		if strings.Contains(request.Text(), "хватит") || strings.Contains(request.Text(), "всё") {
+			delete(v.states, request.Session.UserID)
+			response.Text("Заходите ещё.")
+			response.Response.EndSession = true
+			return response
+		}
+
 		if currentState, ok := v.states[request.Session.UserID]; ok {
+
+			if strings.Contains(request.Text(), "ещё") || strings.Contains(request.Text(), "еще") || strings.Contains(request.Text(), "друго") {
+				if currentState.action == "ans" {
+					answer := v.getAnswer(currentState.word)
+					response.Text(answer)
+					currentState = State{
+						action: "ans",
+						word:   currentState.word,
+						last:   answer,
+					}
+					v.states[request.Session.UserID] = currentState
+					return response
+				} else {
+					currentState := State{
+						action: "ask",
+						word:   "",
+						last:   "",
+					}
+					//v.mux.Lock()
+					//defer v.mux.Unlock()
+					v.states[request.Session.UserID] = currentState
+					response.Text("Произнесите слово, и я придумаю заголовок.")
+					return response
+				}
+			}
+
+			if strings.Contains(request.Text(), "повтори") || strings.Contains(request.Text(), "не понял") {
+				if currentState.action == "ans" {
+					response.Text(currentState.last)
+					return response
+				} else {
+					currentState := State{
+						action: "ask",
+						word:   "",
+						last:   "",
+					}
+					//v.mux.Lock()
+					//defer v.mux.Unlock()
+					v.states[request.Session.UserID] = currentState
+					response.Text("Произнесите слово, и я придумаю заголовок.")
+					return response
+				}
+			}
+
+			if strings.Contains(request.Text(), "новое") || strings.Contains(request.Text(), "новый") {
+				currentState := State{
+					action: "ask",
+					word:   "",
+					last:   "",
+				}
+				//v.mux.Lock()
+				//defer v.mux.Unlock()
+				v.states[request.Session.UserID] = currentState
+				response.Text("Произнесите слово, и я придумаю заголовок.")
+				return response
+			}
+
 			if currentState.action == "ask" {
-				resp, err := http.PostForm(
-					"http://title.web-canape.ru/ajax/ajax.php",
-					url.Values{
-						"moduleName": {"TitleGen"},
-						"cmd":        {"gen"},
-						"word":       {request.Text()},
-						"language":   {"ru"},
-					},
-				)
-
-				if err != nil {
-					log.Fatal(err)
-				}
-				defer resp.Body.Close()
-
-				bodyBytes, err := ioutil.ReadAll(resp.Body)
-				if err != nil {
-					log.Fatal(err)
-				}
-				bodyString := string(bodyBytes)
-
-				out, _ := getStringInBetween(bodyString, "<div class=\\\"js-full_text\\\" style=\\\"display: none;\\\">", "<\\/div>")
-				response.Text(out)
+				answer := v.getAnswer(request.Text())
+				response.Text(answer)
 				currentState = State{
 					action: "ans",
 					word:   request.Text(),
-					last:   out,
+					last:   answer,
 				}
 				v.states[request.Session.UserID] = currentState
+				return response
+			} else {
+				currentState = State{
+					action: "ask",
+					word:   "",
+					last:   "",
+				}
+				v.states[request.Session.UserID] = currentState
+				response.Text("Произнесите новое слово")
 				return response
 			}
 		} else {
@@ -82,9 +163,31 @@ func (v PhrasesGenerator) HandleRequest() func(request *alice.Request, response 
 			response.Text("Здравствуйте! Просто произнесите слово, и я придумаю заголовок.")
 			return response
 		}
-		response.Text(request.OriginalUtterance())
-		return response
+
 	}
+}
+
+func (v PhrasesGenerator) getAnswer(text string) string {
+	resp, err := http.PostForm(
+		"http://title.web-canape.ru/ajax/ajax.php",
+		url.Values{
+			"moduleName": {"TitleGen"},
+			"cmd":        {"gen"},
+			"word":       {text},
+			"language":   {"ru"},
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	bodyString := string(bodyBytes)
+	out, _ := getStringInBetween(bodyString, "<div class=\\\"js-full_text\\\" style=\\\"display: none;\\\">", "<\\/div>")
+	return out
 }
 
 func getStringInBetween(str string, start string, end string) (string, error) {
