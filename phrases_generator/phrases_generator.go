@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"yandex-dialogs/common"
 )
 
 var client = http.Client{}
@@ -16,6 +17,7 @@ var client = http.Client{}
 type PhrasesGenerator struct {
 	states map[string]State
 	mux    sync.Mutex
+	apiUrl string
 }
 
 type State struct {
@@ -31,6 +33,7 @@ func (v PhrasesGenerator) GetPath() string {
 func NewDialog() PhrasesGenerator {
 	return PhrasesGenerator{
 		states: map[string]State{},
+		apiUrl: common.GetEnv("TITLE_GENERATOR_URL", ""),
 	}
 }
 
@@ -169,7 +172,7 @@ func (v PhrasesGenerator) HandleRequest() func(request *alice.Request, response 
 
 func (v PhrasesGenerator) getAnswer(text string) string {
 	resp, err := http.PostForm(
-		"http://title.web-canape.ru/ajax/ajax.php",
+		v.apiUrl,
 		url.Values{
 			"moduleName": {"TitleGen"},
 			"cmd":        {"gen"},
