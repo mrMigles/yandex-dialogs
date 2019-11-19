@@ -10,21 +10,26 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"yandex-dialogs/common"
 	"yandex-dialogs/masha"
 	"yandex-dialogs/phrases_generator"
 	"yandex-dialogs/voice_mail"
 )
 
-// 1. Implement your handler complying this interface
+// 1. Implement your handler (dialog) complying this interface
 type Dialog interface {
+
+	// Returns func which takes incoming Alice request and prepared response with filled `session` information. Response should be returned.
 	HandleRequest() func(request *alice.Request, response *alice.Response) *alice.Response
+
+	// Returns related path of your dialog. For example, `api/dialogs/sample-dialog`
 	GetPath() string
 }
 
 var (
-	serveHost = flag.String("serve_host", GetEnv("SERVER_HOST", ""),
+	serveHost = flag.String("serve_host", common.GetEnv("SERVER_HOST", ""),
 		"Host to serve requests incoming to Instagram Provider")
-	servePort = flag.String("serve_port", GetEnv("PORT", "8080"),
+	servePort = flag.String("serve_port", common.GetEnv("PORT", "8080"),
 		"Port to serve requests incoming to Instagram Provider")
 	g errgroup.Group
 )
