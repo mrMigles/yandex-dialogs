@@ -24,7 +24,7 @@ func NewMasha() Masha {
 	rand.Seed(time.Now().Unix())
 	return Masha{
 		mashaUrl:   common.GetEnv("MASHA_URL", ""),
-		httpClient: http.Client{Timeout: time.Millisecond * 2800},
+		httpClient: http.Client{Timeout: time.Millisecond * 2700},
 	}
 }
 
