@@ -8,6 +8,8 @@ import (
 	"sync"
 )
 
+var statistics = map[string]map[string]int{}
+
 func Handler() func(func(w http.ResponseWriter, r *http.Request)) http.Handler {
 	return func(f func(w http.ResponseWriter, r *http.Request)) http.Handler {
 		h := http.HandlerFunc(f)
@@ -55,12 +57,75 @@ func handleRequest(f func(request *alice.Request, response *alice.Response) *ali
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		if req.Request.OriginalUtterance != "ping" {
+			if stats, ok := statistics[r.RequestURI]; ok {
+				if _, ok := stats[req.Session.UserID]; ok {
+					stats[req.Session.UserID]++
+				} else {
+					stats[req.Session.UserID] = 1
+					stats["totalUsers"]++
+				}
+				stats["totalMessages"]++
+			} else {
+				statistics[r.RequestURI] = map[string]int{}
+				statistics[r.RequestURI][req.Session.UserID] = 1
+				statistics[r.RequestURI]["totalMessages"] = 1
+				statistics[r.RequestURI]["totalUsers"] = 1
+			}
+		}
 
 		resp := initResponse(respPool, req)
 
 		resp = f(req, resp)
 
 		b, err := json.Marshal(resp)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(200)
+		w.Write(b)
+	}
+}
+
+func handleHealthRequest(dialogs []Dialog) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
+		for _, v := range dialogs {
+			ok, message := v.Health()
+			if !ok {
+				w.WriteHeader(500)
+				w.Write([]byte(message))
+				return
+			}
+		}
+		w.WriteHeader(200)
+		w.Write([]byte("OK"))
+	}
+}
+
+func handleStatisticsRequest() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
+		responseStatistics := map[string]map[string]int{}
+
+		for k, v := range statistics {
+			responseStatistics[k] = map[string]int{}
+			responseStatistics[k]["totalMessages"] = v["totalMessages"]
+			responseStatistics[k]["totalUsers"] = v["totalUsers"]
+		}
+
+		b, err := json.Marshal(responseStatistics)
 		if err != nil {
 			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)

@@ -18,19 +18,21 @@ import (
 
 // 1. Implement your handler (dialog) complying this interface. Put implementation in separated folder/package.
 type Dialog interface {
-
 	// Returns func which takes incoming Alice request and prepared response with filled `session` information. Response should be returned.
 	HandleRequest() func(request *alice.Request, response *alice.Response) *alice.Response
 
 	// Returns base path of your dialog REST API. For example, `/api/dialogs/sample-dialog`
 	GetPath() string
+
+	// Returns state of dialog (true - ok, false - something is wrong) and additional string message.
+	Health() (result bool, message string)
 }
 
 var (
 	serveHost = flag.String("serve_host", common.GetEnv("SERVER_HOST", ""),
-		"Host to serve requests incoming to Instagram Provider")
+		"Host to serve requests incoming to server")
 	servePort = flag.String("serve_port", common.GetEnv("PORT", "8080"),
-		"Port to serve requests incoming to Instagram Provider")
+		"Port to serve requests incoming to server")
 	g errgroup.Group
 )
 
@@ -71,6 +73,18 @@ func handler() http.Handler {
 				handler(handleRequest(v.HandleRequest()))),
 		).Methods("POST", "OPTIONS")
 	}
+
+	r.Handle("/health",
+		handlers.LoggingHandler(
+			os.Stdout,
+			handler(handleHealthRequest(dialogs))),
+	).Methods("GET")
+
+	r.Handle("/statistics",
+		handlers.LoggingHandler(
+			os.Stdout,
+			handler(handleStatisticsRequest())),
+	).Methods("GET")
 
 	return JsonContentType(handlers.CompressHandler(r))
 }

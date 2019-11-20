@@ -1,6 +1,7 @@
 package phrases_generator
 
 import (
+	"fmt"
 	"github.com/azzzak/alice"
 	"io/ioutil"
 	"log"
@@ -26,15 +27,22 @@ type State struct {
 	last   string
 }
 
-func (v PhrasesGenerator) GetPath() string {
-	return "/api/dialogs/phrases-generator"
-}
-
 func NewDialog() PhrasesGenerator {
 	return PhrasesGenerator{
 		states: map[string]State{},
 		apiUrl: common.GetEnv("TITLE_GENERATOR_URL", ""),
 	}
+}
+
+func (v PhrasesGenerator) GetPath() string {
+	return "/api/dialogs/phrases-generator"
+}
+
+func (v PhrasesGenerator) Health() (result bool, message string) {
+	if _, err := v.getAnswer("Тест"); err != nil {
+		return false, fmt.Sprintf("Exception occurred when getting message from API: %v", err)
+	}
+	return true, "OK"
 }
 
 func (v PhrasesGenerator) HandleRequest() func(request *alice.Request, response *alice.Response) *alice.Response {
@@ -80,7 +88,7 @@ func (v PhrasesGenerator) HandleRequest() func(request *alice.Request, response 
 
 			if strings.Contains(request.Text(), "ещё") || strings.Contains(request.Text(), "еще") || strings.Contains(request.Text(), "друго") {
 				if currentState.action == "ans" {
-					answer := v.getAnswer(currentState.word)
+					answer, _ := v.getAnswer(currentState.word)
 					response.Text(answer)
 					currentState = State{
 						action: "ans",
@@ -135,7 +143,7 @@ func (v PhrasesGenerator) HandleRequest() func(request *alice.Request, response 
 			}
 
 			if currentState.action == "ask" {
-				answer := v.getAnswer(request.Text())
+				answer, _ := v.getAnswer(request.Text())
 				response.Text(answer)
 				currentState = State{
 					action: "ans",
@@ -170,7 +178,7 @@ func (v PhrasesGenerator) HandleRequest() func(request *alice.Request, response 
 	}
 }
 
-func (v PhrasesGenerator) getAnswer(text string) string {
+func (v PhrasesGenerator) getAnswer(text string) (string, error) {
 	resp, err := http.PostForm(
 		v.apiUrl,
 		url.Values{
@@ -181,16 +189,18 @@ func (v PhrasesGenerator) getAnswer(text string) string {
 		},
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return "Что-то пошло не так, попробуйте ещё раз", err
 	}
 	defer resp.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return "Что-то пошло не так, попробуйте ещё раз", err
 	}
 	bodyString := string(bodyBytes)
 	out, _ := getStringInBetween(bodyString, "<div class=\\\"js-full_text\\\" style=\\\"display: none;\\\">", "<\\/div>")
-	return out
+	return out, nil
 }
 
 func getStringInBetween(str string, start string, end string) (string, error) {

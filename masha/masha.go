@@ -16,16 +16,27 @@ import (
 var helloSentences = [...]string{"Привет", "Добрый день", "Здравствуйте"}
 
 type Masha struct {
-	mashaUrl string
+	mashaUrl   string
+	httpClient http.Client
 }
 
 func NewMasha() Masha {
 	rand.Seed(time.Now().Unix())
-	return Masha{mashaUrl: common.GetEnv("MASHA_URL", "")}
+	return Masha{
+		mashaUrl:   common.GetEnv("MASHA_URL", ""),
+		httpClient: http.Client{Timeout: time.Millisecond * 2800},
+	}
 }
 
 func (v Masha) GetPath() string {
 	return "/api/dialogs/masha"
+}
+
+func (v Masha) Health() (result bool, message string) {
+	if _, err := v.getAnswer("health", "Привет"); err != nil {
+		return false, fmt.Sprintf("Exception occurred when getting message from API: %v", err)
+	}
+	return true, "OK"
 }
 
 func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Response) *alice.Response {
@@ -42,30 +53,32 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 			response.Text("Меня зовут Маша. Я интерактивный бот собеседеник. Просто спроси меня что нибудь, и давай поболтаем. Если устанешь от меня, просто скажи - всё или - хватит болтать.")
 			return response
 		}
-		answer := v.getAnswer(request, text)
+		answer, _ := v.getAnswer(request.Session.UserID, text)
 
 		response.Text(answer)
 		return response
 	}
 }
 
-func (v Masha) getAnswer(request *alice.Request, text string) string {
-	resp, err := http.PostForm(
+func (v Masha) getAnswer(userID string, text string) (string, error) {
+	resp, err := v.httpClient.PostForm(
 		v.mashaUrl,
 		url.Values{
-			"chatId":  {request.Session.UserID},
+			"chatId":  {userID},
 			"message": {text},
 		},
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return "Даже не знаю, спроси что нибудь ещё", err
 	}
 	defer resp.Body.Close()
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return "Даже не знаю, спроси что нибудь ещё", err
 	}
 	bodyString := string(bodyBytes)
-	return bodyString
+	return bodyString, nil
 }

@@ -14,6 +14,10 @@ func (v VoiceMail) GetPath() string {
 	return "/api/dialogs/voice-mail"
 }
 
+func (v VoiceMail) Health() (result bool, message string) {
+	return true, "OK"
+}
+
 func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.Response) *alice.Response {
 	return func(request *alice.Request, response *alice.Response) *alice.Response {
 		response.Text(request.OriginalUtterance())
