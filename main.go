@@ -40,7 +40,7 @@ var (
 func buildHandlers() []Dialog {
 	var dialogs []Dialog
 	dialogs = append(dialogs, phrases_generator.NewDialog())
-	dialogs = append(dialogs, voice_mail.VoiceMail{})
+	dialogs = append(dialogs, voice_mail.NewVoiceMail())
 	dialogs = append(dialogs, masha.NewMasha())
 	return dialogs
 }
