@@ -465,17 +465,16 @@ func (v VoiceMail) generateNumber(userId string) (int, error) {
 
 	rand.Seed(int64(hash(userId)))
 	number := 20000 + rand.Intn(99999-20000)
-
+	defer v.mux.Unlock()
 	for i := 0; i < 5; i++ {
 		user := &User{}
 		err := v.connection.Collection("users").FindOne(bson.M{"number": number}, user)
 		if err != nil {
 			if _, ok := err.(*bongo.DocumentNotFoundError); ok {
-				defer v.mux.Unlock()
+
 				return number, nil
 			} else {
 				log.Print("real error " + err.Error())
-				defer v.mux.Unlock()
 				return 0, err
 			}
 		}
