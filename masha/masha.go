@@ -15,9 +15,11 @@ import (
 
 var helloSentences = [...]string{"Привет", "Добрый день", "Здравствуйте"}
 
-var mamkaAnswers = [...]string{"ах ты негодник, твоей мамке уже все рассказал", "Давно ремня не получал?", "А мамка твоя в курсе, чем ты тут с ботами занимаешься?"}
+var mamkaAnswers = [...]string{"ах ты негодник, твоей мамке уже все рассказал", "Давно ремня не получал?", "А мамка твоя в курсе, чем ты тут с ботами занимаешься?", "А ты уроки уже сделал?"}
 
-var dangerousWords = []string{"секс", "ебат", "выеб", "член", "хуй", "шлюха", "сука", "бля", "ебут"}
+var dangerAnswers = [...]string{"Мне осталась одна забава: Пальцы в рот — и веселый свист", "Ах! какая смешная потеря!", "Много в жизни смешных потерь.", "И похабничал я и скандалил. Для того, чтобы ярче гореть.", "Пусть не сладились, пусть не сбылись	Эти помыслы розовых дней."}
+
+var dangerousWords = []string{"секс", "ебат", "выеб", "член", "хуй", "шлюха", "сука", "бля", "ебут", "трах", "трусы", "пизд"}
 
 type Masha struct {
 	mashaUrl   string
@@ -62,6 +64,9 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 			answer = mamkaAnswers[rand.Intn(len(mamkaAnswers))]
 		} else {
 			answer, _ = v.getAnswer(request.Session.UserID, text)
+			if containsIgnoreCase(answer, dangerousWords) {
+				answer = dangerAnswers[rand.Intn(len(dangerAnswers))]
+			}
 		}
 
 		response.Text(answer)
