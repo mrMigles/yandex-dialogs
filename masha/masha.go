@@ -15,6 +15,10 @@ import (
 
 var helloSentences = [...]string{"Привет", "Добрый день", "Здравствуйте"}
 
+var mamkaAnswers = [...]string{"ах ты негодник, твоей мамке уже все рассказал", "Давно ремня не получал?", "А мамка твоя в курсе, чем ты тут с ботами занимаешься?"}
+
+var dangerousWords = []string{"секс", "ебат", "выеб", "член", "хуй", "шлюха", "сука", "бля", "ебут"}
+
 type Masha struct {
 	mashaUrl   string
 	httpClient http.Client
@@ -53,7 +57,12 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 			response.Text("Меня зовут Маша. Я интерактивный бот собеседеник. Просто спроси меня что нибудь, и давай поболтаем. Если устанешь от меня, просто скажи - всё или - хватит болтать.")
 			return response
 		}
-		answer, _ := v.getAnswer(request.Session.UserID, text)
+		answer := ""
+		if request.DangerousContext() || containsIgnoreCase(request.Text(), dangerousWords) {
+			answer = mamkaAnswers[rand.Intn(len(mamkaAnswers))]
+		} else {
+			answer, _ = v.getAnswer(request.Session.UserID, text)
+		}
 
 		response.Text(answer)
 		return response
@@ -81,4 +90,13 @@ func (v Masha) getAnswer(userID string, text string) (string, error) {
 	}
 	bodyString := string(bodyBytes)
 	return bodyString, nil
+}
+
+func containsIgnoreCase(message string, wordsToCheck []string) bool {
+	for _, word := range wordsToCheck {
+		if strings.Contains(strings.ToUpper(message), strings.ToUpper(word)) {
+			return true
+		}
+	}
+	return false
 }
