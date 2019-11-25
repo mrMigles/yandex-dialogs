@@ -57,7 +57,7 @@ func (v PhrasesGenerator) HandleRequest() func(request *alice.Request, response 
 			//v.mux.Lock()
 			//defer v.mux.Unlock()
 			v.states[request.Session.UserID] = currentState
-			response.Text("Здравствуйте! Просто произнесите слово, и я придумаю заголовок с этим словом.")
+			response.Text("Здравствуйте! Просто произнесите слово, и я придумаю заголовок!")
 			return response
 		}
 

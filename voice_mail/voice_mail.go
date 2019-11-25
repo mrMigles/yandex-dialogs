@@ -19,10 +19,10 @@ var acceptWords = []string{"да", "давай", "можно", "плюс", "аг
 var negativeWords = []string{"нет", "не", "не надо"}
 var helpWords = []string{"что ты умеешь", "help", "помог", "помощь", "что делать", "как", "не понятно", "не понял", "не понятно", "что дальше"}
 var nextWords = []string{"дальше", "еще", "ещё", "еше", "следующ", "продолж"}
-var cancelWords = []string{"отмена", "хватит", "всё", "закончили", "выход"}
+var cancelWords = []string{"отмена", "хватит", "все", "всё", "закончи", "выход"}
 var newMessageWords = []string{"новое сообщение", "новое письмо", "отправить", "отправь", "письмо"}
 var sendWords = []string{"отправить", "отправляй", "запускай"}
-var replyWords = []string{"ответить", "ответь", "reply"}
+var replyWords = []string{"ответить", "ответ", "reply"}
 var repeatWords = []string{"повтор", "расслышал"}
 var checkMailWords = []string{"открой почту", "сообщения", "входящие", "проверь почту", "проверить почту", "что там у меня", "есть новые сообщения", "письма", "ящик", "проверь", "проверить"}
 var blackListWords = []string{"забань", "добавь в черный список", "черный список", "чёрный список"}
@@ -111,22 +111,23 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				return response
 			}
 
-			response.Text(fmt.Sprintf("Добро пожаловать в голосовую почту! Ваш почтовый номер: %s. Чтобы отправить сообщение, скажите - новое сообщение, или - отправить. "+
-				"Чтобы проверить почту, скажите - проверить почту. Если появятся вопросы, просто скажите - помощь, или задайте вопрос.", v.printNumber(currentUser.Number)))
+			response.Text(fmt.Sprintf("Добро пожаловать в говорящую почту! Ваш почтовый номер: %s. На этот номер вам смогут присылать сообщения."+
+				" Чтобы отправить сообщение, скажите - новое сообщение."+
+				" Если появятся вопросы, просто скажите - помощь, или задайте вопрос.", v.printNumber(currentUser.Number)))
 			return response
 		}
 
 		if request.Session.New {
 			v.states[currentUser.Id] = &UserState{user: currentUser, state: "root"}
 
-			text := fmt.Sprintf("Здравствуйте, %s! ", v.printNumber(currentUser.Number))
+			text := fmt.Sprintf("Здравствуйте! ")
 			count := v.getCountOfMessages(currentUser)
 
 			if count > 0 {
-				text += fmt.Sprintf("У вас %d %s. Хотите прослушать?", count, alice.Plural(count, "новое сообщение", "новых сообщения", "новых сообщений"))
+				text += fmt.Sprintf("У вас %s %s. Хотите прослушать?", v.printCount(count), alice.Plural(count, "новое сообщение", "новых сообщения", "новых сообщений"))
 				v.states[currentUser.Id].state = "ask_start_listen_mail"
 			} else {
-				text += "У вас нет новых сообщений."
+				text += "У вас нет новых сообщений. Скажите - отправить, чтобы отправить новое сообщение."
 			}
 			response.Text(text)
 			return response
@@ -142,7 +143,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				if containsIgnoreCase(request.Text(), checkMailWords) {
 					count := v.getCountOfMessages(currentUser)
 					if count > 0 {
-						response.Text(fmt.Sprintf("У вас %d %s. Хотите прослушать?", count, alice.Plural(count, "новое сообщение", "новых сообщения", "новых сообщений")))
+						response.Text(fmt.Sprintf("У вас %s %s. Хотите прослушать?", v.printCount(count), alice.Plural(count, "новое сообщение", "новых сообщения", "новых сообщений")))
 						currentState.state = "ask_start_listen_mail"
 					} else {
 						response.Text("У вас нет новых сообщений.")
@@ -174,7 +175,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				}
 
 				// for cancel phrase
-				if containsIgnoreCase(request.Text(), cancelWords) {
+				if containsIgnoreCase(request.Text(), cancelWords) || containsIgnoreCase(request.Text(), negativeWords) {
 					response.Text("Окей, заходите ещё!")
 					response.EndSession()
 					currentState = nil
@@ -193,7 +194,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						currentState.state = "root"
 						return response
 					}
-					text := fmt.Sprintf("Сообщение от номера: %s. %s. Конец сообщения. Слушать дальше или ответить?", v.printNumber(message.From), message.Text)
+					text := fmt.Sprintf("Сообщение от номера: %s. %s. - . Слушать дальше или ответить?", v.printNumber(message.From), message.Text)
 					response.Text(text)
 					currentState.context = message
 					currentState.state = "ask_continue_listen_mail"
@@ -207,11 +208,12 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				// for no phrase
 				if containsIgnoreCase(request.Text(), negativeWords) || containsIgnoreCase(request.Text(), cancelWords) {
 					currentState.state = "root"
+					currentState.context = nil
 					response.Text("Окей, хотите что-то ещё?")
 					return response
 				}
 
-				response.Text("Скажите - да, чтобы перейти к прсолушиванию сообщений. Или - отмена, чтобы выйти в галвное меню.")
+				response.Text("Скажите - да, чтобы перейти к прослушиванию сообщений. Или - отмена, чтобы выйти в главное меню.")
 				return response
 			}
 			if currentState.state == "ask_continue_listen_mail" {
@@ -221,9 +223,10 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					if message == nil {
 						response.Text("У вас нет новых сообщений.")
 						currentState.state = "root"
+						currentState.context = nil
 						return response
 					}
-					text := fmt.Sprintf("Сообщение от номера: %s. %s. Конец сообщения. Слушать дальше или ответить?", v.printNumber(message.From), message.Text)
+					text := fmt.Sprintf("Сообщение от номера: %s. %s. - . Слушать дальше или ответить?", v.printNumber(message.From), message.Text)
 					response.Text(text)
 					currentState.state = "ask_continue_listen_mail"
 					currentState.context = message
@@ -241,7 +244,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						currentState.state = "root"
 						return response
 					}
-					text := fmt.Sprintf("Сообщение от номера: %s. %s. Конец сообщения. Слушать дальше или ответить?", v.printNumber(currentState.context.From), currentState.context.Text)
+					text := fmt.Sprintf("Сообщение от номера: %s. %s. - . Слушать дальше или ответить?", v.printNumber(currentState.context.From), currentState.context.Text)
 					response.Text(text)
 					return response
 				}
@@ -249,7 +252,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				// for no phrase
 				if containsIgnoreCase(request.Text(), negativeWords) || containsIgnoreCase(request.Text(), cancelWords) {
 					currentState.state = "root"
-					currentState = nil
+					currentState.context = nil
 					response.Text("Окей, хотите что-то ещё?")
 					return response
 				}
@@ -297,9 +300,10 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						currentState.state = "root"
 						return response
 					}
-					text := fmt.Sprintf("Сообщение от номера %s. %s . Конец сообщения. Слушать дальше или ответить?", v.printNumber(message.From), message.Text)
+					text := fmt.Sprintf("Сообщение от номера %s. %s . - . Слушать дальше или ответить?", v.printNumber(message.From), message.Text)
 					response.Text(text)
 					currentState.state = "ask_continue_listen_mail"
+					currentState.context = message
 					err := v.connection.Collection("messages").DeleteDocument(message)
 					if err != nil {
 						log.Printf("Error: %v", err)
@@ -316,13 +320,13 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				// for cancel phrase
 				if equalsIgnoreCase(request.Text(), cancelWords) {
 					currentState.state = "root"
-					currentState = nil
+					currentState.context = nil
 					response.Text("Окей, хотите что-то ещё?")
 					return response
 				}
 
 				if currentState.context == nil {
-					response.Text("Скажите отправить новое сообщение, для того чтобы отправить")
+					response.Text("Скажите - отправить, для того чтобы отправить новое сообщение")
 					currentState.state = "root"
 					return response
 				}
@@ -333,7 +337,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				}
 				to, err := strconv.Atoi(number)
 				if err != nil {
-					response.Text("Вам нужно назвать пятизначный номер получателя, или скажите - отмена, чтобы вернуться в главное меню.")
+					response.Text("Вам нужно назвать четырёхзначный номер получателя, или скажите - отмена, чтобы вернуться в главное меню.")
 					return response
 				}
 				currentState.context.To = to
@@ -353,7 +357,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				// for no phrase
 				if equalsIgnoreCase(request.Text(), cancelWords) {
 					currentState.state = "root"
-					currentState = nil
+					currentState.context = nil
 					response.Text("Окей, хотите что-то ещё?")
 					return response
 				}
@@ -366,7 +370,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 
 				currentState.context.Text = request.Text()
 				currentState.state = "ask_send_confirm"
-				response.Text(fmt.Sprintf("Отправить сообщение на номер - %s, c текстом - %s?", v.printNumber(currentState.context.To), currentState.context.Text))
+				response.Text(fmt.Sprintf("Отправляю сообщение - %s - на номер - %s. Всё верно?", currentState.context.Text, v.printNumber(currentState.context.To)))
 				return response
 
 			}
@@ -379,7 +383,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						response.Text("Произошла ошибка, попробуйте ещё раз")
 						return response
 					}
-					currentState = nil
+					currentState.context = nil
 					response.Text("Сообщение отправлено! Хотите что-то ещё?")
 					return response
 				}
@@ -387,12 +391,12 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				// for no phrase
 				if containsIgnoreCase(request.Text(), negativeWords) || containsIgnoreCase(request.Text(), cancelWords) {
 					currentState.state = "root"
-					currentState = nil
+					currentState.context = nil
 					response.Text("Окей, хотите что-то ещё?")
 					return response
 				}
 
-				response.Text("Что подтвердить отправку сообщения, скажите - да. Скажите - отмена, или - нет, чтобы вернуться в главое меню")
+				response.Text("Что подтвердить отправку сообщения, скажите - да. Либо скажите - отмена, чтобы вернуться в главое меню")
 				return response
 			}
 
@@ -464,7 +468,7 @@ func (v VoiceMail) generateNumber(userId string) (int, error) {
 	v.mux.Lock()
 
 	rand.Seed(int64(hash(userId)))
-	number := 20000 + rand.Intn(99999-20000)
+	number := 1000 + rand.Intn(9999-1000)
 	defer v.mux.Unlock()
 	for i := 0; i < 5; i++ {
 		user := &User{}
@@ -485,10 +489,15 @@ func (v VoiceMail) generateNumber(userId string) (int, error) {
 
 func (v VoiceMail) printNumber(number int) string {
 	strNumber := strings.Split(strconv.Itoa(number), "")
-	if len(strNumber) != 5 {
-		return fmt.Sprintf("%s", strings.Join(strNumber, " "))
+	return fmt.Sprintf("%s", strings.Join(strNumber, "-"))
+}
+
+func (v VoiceMail) printCount(number int) string {
+	countStr := strconv.Itoa(number)
+	if number == 1 {
+		countStr = "одно"
 	}
-	return fmt.Sprintf("%s %s %s", strNumber[0], strNumber[1]+strNumber[2], strNumber[3]+strNumber[4])
+	return countStr
 }
 
 func hash(s string) uint32 {
