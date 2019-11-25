@@ -6,9 +6,12 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"yandex-dialogs/common"
 )
 
 var statistics = map[string]map[string]int{}
+
+var debug = common.GetEnv("DEBUG_LOG", "false")
 
 func Handler() func(func(w http.ResponseWriter, r *http.Request)) http.Handler {
 	return func(f func(w http.ResponseWriter, r *http.Request)) http.Handler {
@@ -80,8 +83,10 @@ func handleRequest(f func(request *alice.Request, response *alice.Response) *ali
 			log.Print("ping request")
 		}
 
-		log.Printf("Incomming request from host: %s. Request: { userId: %s, text: %s}. Response: { text: %s}",
-			r.RemoteAddr, req.Session.UserID, req.Text(), resp.Response.Text)
+		if debug == "true" {
+			log.Printf("Incomming request from host: %s. Request: { userId: %s, text: %s}. Response: { text: %s}",
+				r.RemoteAddr, req.Session.UserID, req.Text(), resp.Response.Text)
+		}
 		b, err := json.Marshal(resp)
 		if err != nil {
 			log.Println(err)
