@@ -57,7 +57,10 @@ func handleRequest(f func(request *alice.Request, response *alice.Response) *ali
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		resp := initResponse(respPool, req)
+
 		if req.Request.OriginalUtterance != "ping" {
+			resp = f(req, resp)
 			if stats, ok := statistics[r.RequestURI]; ok {
 				if _, ok := stats[req.Session.UserID]; ok {
 					stats[req.Session.UserID]++
@@ -72,11 +75,10 @@ func handleRequest(f func(request *alice.Request, response *alice.Response) *ali
 				statistics[r.RequestURI]["totalMessages"] = 1
 				statistics[r.RequestURI]["totalUsers"] = 1
 			}
+		} else {
+			resp.Text("4 пакета отправлено, 3 пакета получено. 1 пакет украли на почте")
+			log.Print("ping request")
 		}
-
-		resp := initResponse(respPool, req)
-
-		resp = f(req, resp)
 
 		b, err := json.Marshal(resp)
 		if err != nil {
