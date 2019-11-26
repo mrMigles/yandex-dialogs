@@ -15,11 +15,11 @@ import (
 
 var helloSentences = [...]string{"Привет", "Добрый день", "Здравствуйте"}
 
-var mamkaAnswers = [...]string{"ах ты негодник, твоей мамке уже все рассказал", "Давно ремня не получал?", "А мамка твоя в курсе, чем ты тут с ботами занимаешься?", "А ты уроки уже сделал?"}
+var mamkaAnswers = [...]string{"ах ты негодник, твоей мамке уже все рассказала", "Давно ремня не получал?", "А мамка твоя в курсе, чем ты тут с ботами занимаешься?", "А ты уроки уже сделал?"}
 
 var dangerAnswers = [...]string{"Мне осталась одна забава: Пальцы в рот — и веселый свист", "Ах! какая смешная потеря!", "Много в жизни смешных потерь.", "И похабничал я и скандалил. Для того, чтобы ярче гореть.", "Пусть не сладились, пусть не сбылись	Эти помыслы розовых дней."}
 
-var dangerousWords = []string{"секс", "ебат", "выеб", "член", "хуй", "шлюха", "сука", "бля", "ебут", "трах", "трусы", "пизд"}
+var dangerousWords = []string{"секс", "ебал", "ебат", "выеб", "член", "хуй", "шлюха", "сука", "бля", "ебут", "трах", "трусы", "пизд", "ебл", " рот", "соса", "жоп", "попу", "попа", "сиськ", "сиск", "соск"}
 
 type Masha struct {
 	mashaUrl   string
@@ -51,16 +51,16 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 		text := request.Text()
 		if request.Session.New == true {
 			answer := helloSentences[rand.Intn(len(helloSentences))]
-			response.Text(fmt.Sprintf("%s! Давай поболтаем?", answer))
+			response.Text(fmt.Sprintf("Внимание, диалог может содержать взрослый и непристойный контент, если Вам нет восемнадцати лет, пожалуйста, закройте навык. - %s! Давай поболтаем?", answer))
 			return response
-		} else if strings.EqualFold(text, "всё") || strings.EqualFold(text, "все") || text == "закончили" || strings.HasPrefix(text, "хватит") || strings.HasPrefix(text, "выключи") {
+		} else if strings.EqualFold(text, "всё") || strings.EqualFold(text, "все") || strings.Contains(text, "хватит") || strings.Contains(text, "закончи") || strings.Contains(text, "выключи") || strings.Contains(text, "выход") {
 			response.Response.EndSession = true
 		} else if strings.EqualFold(text, "помощь") || strings.EqualFold(text, "что ты умеешь") || strings.Contains(text, "ты умеешь") {
-			response.Text("Меня зовут Маша. Я интерактивный бот собеседеник. Просто спроси меня что нибудь, и давай поболтаем. Если устанешь от меня, просто скажи - всё или - хватит болтать.")
+			response.Text("Меня зовут Маша. Я интерактивный бот собеседеник, обучаюсь на разговорах с людьми и каждый день должна становиться умнее. Но практика показывает, что я только деградирую... Просто спроси меня что нибудь, и давай поболтаем. Если устанешь от меня, просто скажи - всё или - хватит болтать.")
 			return response
 		}
 		answer := ""
-		if request.DangerousContext() || containsIgnoreCase(request.Text(), dangerousWords) {
+		if containsIgnoreCase(request.Text(), dangerousWords) {
 			answer = mamkaAnswers[rand.Intn(len(mamkaAnswers))]
 		} else {
 			answer, _ = v.getAnswer(request.Session.UserID, text)
