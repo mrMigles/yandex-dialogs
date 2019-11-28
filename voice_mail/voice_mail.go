@@ -128,7 +128,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 			helloMessage := &Message{From: 1000, To: number, Text: "Добро пожаловать в ряды пользователей Говорящей почты! " +
 				"Это первое, приветсвенное 'Hello World' сообщение от создателя навыка. " +
 				"Вы можете использовать номер 1-0-0-0 для отправки ваших отзывов и предложений по навыку. " +
-				"Иногда с этого номера будет приходить важная информация об измененениях в работе навыка. " +
+				"Иногда с этого номера будет приходить важная информация об изменениях в работе навыка. " +
 				"Ответьте на данное сообщение, если у вас есть идеи, как можно сделать Говорящую почту лучше. " +
 				"Спасибо, что пользуетесь навыком! " +
 				"Конец связи."}
@@ -220,7 +220,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Text("Для того, чтобы отправить сообщение, скажите - отправить. " +
 						"Чтобы проверить почту, скажите - проверить почту. " +
 						"Чтобы узнать свой номер, скажите - мой номер. " +
-						"Чтобы отменить текущую операцию, скажите - отмена, или - выход.")
+						"Чтобы отменить текущую операцию, скажите - отмена. Скажите - закончить, чтобы выйти из навыка.")
 					response.Button("Отправить", "", true)
 					response.Button("Проверить почту", "", true)
 					response.Button("Мой номер", "", true)
@@ -228,12 +228,17 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					return response
 				}
 
+				if strings.EqualFold(request.Text(), "Закончить") {
+					response.EndSession()
+					response.Text("До свидания!")
+					return response
+				}
+
 				// for cancel phrase
 				if containsIgnoreCase(request.Text(), cancelWords) || containsIgnoreCase(request.Text(), negativeWords) {
-					response.Text("Окей, заходите ещё!")
+					response.Text("Окей, заходите ещё! Скажите - закончить, чтобы выйти из навыка.")
 					response.Button("Оценить навык", "https://dialogs.yandex.ru/store/skills/eacbce8f-govoryashaya-po", false)
 					response.Button("Закончить", "", false)
-					response.EndSession()
 					currentState = nil
 					return response
 				}
