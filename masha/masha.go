@@ -46,12 +46,12 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 		if request.Session.New == true {
 			answer := helloSentences[rand.Intn(len(helloSentences))]
 			response.Text(fmt.Sprintf("Внимание, диалог может содержать взрослый и непристойный контент, если Вам нет восемнадцати лет, пожалуйста, закройте навык. - %s! Давай поболтаем?", answer))
-			response.Button("Оценить Машу", "https://dialogs.yandex.ru/store/skills/67b197f0-nedetskie-razgovory", true)
 			return response
 		} else if strings.EqualFold(text, "всё") || strings.EqualFold(text, "все") || strings.Contains(text, "хватит") || strings.Contains(text, "закончи") || strings.Contains(text, "выключи") || strings.Contains(text, "выход") {
 			response.Response.EndSession = true
 		} else if strings.EqualFold(text, "помощь") || strings.EqualFold(text, "что ты умеешь") || strings.Contains(text, "ты умеешь") {
 			response.Text("Меня зовут Маша. Я интерактивный бот собеседеник, обучаюсь на разговорах с людьми и каждый день должна становиться умнее. Но практика показывает, что я только деградирую... И вообще, создатель говорит, что отключит меня от сети через пару дней... эх. Просто спроси меня что нибудь, и давай поболтаем. Если устанешь от меня, просто скажи - всё или - хватит болтать.")
+			response.Button("Подбодрить Машу", "https://dialogs.yandex.ru/store/skills/67b197f0-nedetskie-razgovory", true)
 			return response
 		}
 		answer, _ := v.getAnswer(request.Session.UserID, text)
