@@ -28,6 +28,8 @@ var checkMailWords = []string{"открой почту", "сообщения", "
 var blackListWords = []string{"забань", "добавь в черный список", "черный список", "чёрный список"}
 var myNumberWords = []string{"мой номер", "какой номер", "меня номер"}
 
+var runSkillWords = []string{"говорящая почта", "говорящую почту", "говорящей почты", "запусти навык"}
+
 var mongoConnection = common.GetEnv("MONGO_CONNECTION", "")
 var databaseName = common.GetEnv("DATABASE_NAME", "voice-mail")
 var encryptKey = common.GetEnv("ENCRYPT_KEY", "")
@@ -101,6 +103,10 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 
 		// if new user
 		if currentUser == nil {
+			if containsIgnoreCase(request.Text(), runSkillWords) {
+				response.Text("Запускаюсь")
+				return response
+			}
 			number, err := v.generateNumber(request.Session.UserID)
 			if err != nil {
 				response.Text("Произошла ошибка, попробуйте в другой раз")
@@ -226,6 +232,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				if containsIgnoreCase(request.Text(), cancelWords) || containsIgnoreCase(request.Text(), negativeWords) {
 					response.Text("Окей, заходите ещё!")
 					response.Button("Оценить навык", "https://dialogs.yandex.ru/store/skills/eacbce8f-govoryashaya-po", false)
+					response.Button("Закончить", "", false)
 					response.EndSession()
 					currentState = nil
 					return response
