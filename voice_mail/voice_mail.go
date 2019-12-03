@@ -236,7 +236,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 
 				// for cancel phrase
 				if containsIgnoreCase(request.Text(), cancelWords) || containsIgnoreCase(request.Text(), negativeWords) {
-					response.Text("Окей, заходите ещё! Скажите - закончить, чтобы выйти из навыка.")
+					response.Text("Хорошо, заходите ещё! Скажите - закончить, чтобы выйти из навыка.")
 					response.Button("Оценить навык", "https://dialogs.yandex.ru/store/skills/eacbce8f-govoryashaya-po", false)
 					response.Button("Закончить", "", false)
 					currentState = nil
