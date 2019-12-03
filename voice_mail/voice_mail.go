@@ -490,10 +490,13 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						response.Button("Отмена", "", true)
 						return response
 					}
-					currentState.context = nil
 					response.Text("Сообщение отправлено! Хотите что-то ещё?")
 					response.Button("Проверить почту", "", true)
 					response.Button("Нет", "", true)
+					if currentState.context.To == 1000 {
+						response.Button("Оценить навык", "https://dialogs.yandex.ru/store/skills/eacbce8f-govoryashaya-po", false)
+					}
+					currentState.context = nil
 					return response
 				}
 
