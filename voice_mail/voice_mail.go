@@ -19,7 +19,7 @@ var acceptWords = []string{"да", "давай", "можно", "плюс", "аг
 var negativeWords = []string{"нет", "не", "не надо"}
 var helpWords = []string{"что ты умеешь", "help", "помог", "помощь", "что делать", "как", "не понятно", "не понял", "не понятно", "что дальше"}
 var nextWords = []string{"дальше", "еще", "ещё", "еше", "следующ", "продолж"}
-var cancelWords = []string{"отмена", "хватит", "все", "всё", "закончи", "закончить", "выход"}
+var cancelWords = []string{"отмена", "хватит", "все", "всё", "закончи", "закончить", "выход", "выйди", "выйти"}
 var newMessageWords = []string{"новое сообщение", "новое письмо", "отправить", "отправь", "письмо"}
 var sendWords = []string{"отправить", "отправляй", "запускай"}
 var replyWords = []string{"ответить", "ответ", "reply"}
@@ -140,8 +140,8 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 
 			response.Text(fmt.Sprintf("Добро пожаловать в говорящую почту! Ваш почтовый номер: %s."+
 				" Поделитесь этим номером с друзьями, и они смогут присылать вам сообщения."+
-				" Вы можете отправить новое сообщение или проверить почту."+
-				" Если появятся вопросы, просто скажите - помощь, или задайте вопрос."+
+				" Сейчас вы можете отправить новое сообщение или проверить почту, просто скажите это."+
+				" Если появятся вопросы, скажите - помощь, или задайте вопрос."+
 				" С чего начнём?", v.printNumber(currentUser.Number)))
 			response.Button("Отправить", "", true)
 			response.Button("Проверить почту", "", true)
@@ -166,7 +166,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				text += "У вас нет новых сообщений. Скажите - отправить, чтобы отправить новое сообщение."
 				response.Button("Отправить", "", true)
 				response.Button("Мой номер", "", true)
-				response.Button("Закончить", "", true)
+				response.Button("Выйти", "", true)
 			}
 			response.Text(text)
 			return response
@@ -189,7 +189,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					} else {
 						response.Text("У вас нет новых сообщений.")
 						response.Button("Отправить", "", true)
-						response.Button("Закончить", "", true)
+						response.Button("Выйти", "", true)
 					}
 					return response
 				}
@@ -211,7 +211,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				if containsIgnoreCase(request.Text(), myNumberWords) {
 					response.Text(fmt.Sprintf("Ваш номер: %s", v.printNumber(currentUser.Number)))
 					response.Button("Отправить", "", true)
-					response.Button("Закончить", "", true)
+					response.Button("Выйти", "", true)
 					return response
 				}
 
@@ -246,7 +246,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				response.Text("Чтобы отправить сообщение, скажите отправить. Для того, чтобы проверить почту, скажите - проверить почту.")
 				response.Button("Отправить", "", true)
 				response.Button("Проверить почту", "", true)
-				response.Button("Закончить", "", true)
+				response.Button("Выйти", "", true)
 				return response
 			}
 			if currentState.state == "ask_start_listen_mail" {
@@ -256,7 +256,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					if message == nil {
 						response.Text("У вас нет новых сообщений.")
 						response.Button("Отправить", "", true)
-						response.Button("Закончить", "", true)
+						response.Button("Выйти", "", true)
 						currentState.state = "root"
 						return response
 					}
@@ -296,7 +296,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						response.Text("У вас нет новых сообщений.")
 						currentState.state = "root"
 						response.Button("Отправить", "", true)
-						response.Button("Закончить", "", true)
+						response.Button("Выйти", "", true)
 						currentState.context = nil
 						return response
 					}
@@ -507,7 +507,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Text("Окей, хотите что-то ещё?")
 					response.Button("Отправить новое", "", true)
 					response.Button("Проверить почту", "", true)
-					response.Button("Закончить", "", true)
+					response.Button("Нет", "", true)
 					return response
 				}
 
@@ -590,21 +590,33 @@ func (v VoiceMail) generateNumber(userId string) (int, error) {
 	rand.Seed(int64(hash(userId)))
 	number := 1000 + rand.Intn(9999-1000)
 	defer v.mux.Unlock()
-	for i := 0; i < 5; i++ {
+	number, err, done := checkAndGenerateId(v, number)
+	if done {
+		return number, err
+	}
+	number = 10000 + rand.Intn(99999-10000)
+	number, err, done = checkAndGenerateId(v, number)
+	if done {
+		return number, err
+	}
+	return 0, errors.New("COLLISION error when generating unique id")
+}
+
+func checkAndGenerateId(v VoiceMail, number int) (int, error, bool) {
+	for i := 0; i < 10; i++ {
 		user := &User{}
 		err := v.connection.Collection("users").FindOne(bson.M{"number": number}, user)
 		if err != nil {
 			if _, ok := err.(*bongo.DocumentNotFoundError); ok {
-
-				return number, nil
+				return number, nil, true
 			} else {
 				log.Print("real error " + err.Error())
-				return 0, err
+				return 0, err, true
 			}
 		}
 		number++
 	}
-	return 0, errors.New("error when generating unique id")
+	return 0, nil, false
 }
 
 func (v VoiceMail) printNumber(number int) string {
