@@ -3,19 +3,14 @@ package masha
 import (
 	"fmt"
 	"github.com/azzzak/alice"
-	"github.com/go-bongo/bongo"
-	"github.com/robfig/cron/v3"
-	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 	"yandex-dialogs/common"
-	"yandex-dialogs/voice_mail"
 )
 
 var helloSentences = [...]string{"Привет", "Добрый день", "Здравствуйте"}
@@ -32,32 +27,14 @@ var databaseName = common.GetEnv("DATABASE_NAME", "voice-mail")
 type Masha struct {
 	mashaUrl   string
 	httpClient http.Client
-	connection *bongo.Connection
 }
 
-func NewMasha() Masha {
+func NewMasha(timeout time.Duration) Masha {
 	rand.Seed(time.Now().Unix())
-
-	config := &bongo.Config{
-		ConnectionString: mongoConnection,
-		Database:         databaseName,
-	}
-	connection, err := bongo.Connect(config)
-	if err != nil {
-		log.Print(err)
-	}
 
 	masha := Masha{
 		mashaUrl:   common.GetEnv("MASHA_URL", ""),
-		httpClient: http.Client{Timeout: time.Millisecond * 2700},
-		connection: connection,
-	}
-	c := cron.New()
-	_, err = c.AddFunc("*/5 * * * *", masha.mail())
-	if err != nil {
-		log.Printf("Error running cron for Masha mail: %+v", err)
-	} else {
-		c.Start()
+		httpClient: http.Client{Timeout: time.Millisecond * timeout},
 	}
 	return masha
 }
@@ -67,18 +44,8 @@ func (v Masha) GetPath() string {
 }
 
 func (v Masha) Health() (result bool, message string) {
-	if _, err := v.getAnswer("health", "Привет"); err != nil {
+	if _, err := v.GetAnswer("health", "Привет"); err != nil {
 		return false, fmt.Sprintf("Exception occurred when getting message from API: %v", err)
-	}
-	if v.connection.Session.Ping() != nil {
-		log.Printf("Ping failed")
-		v.connection.Session.Close()
-		config := &bongo.Config{
-			ConnectionString: mongoConnection,
-			Database:         databaseName,
-		}
-		v.connection, _ = bongo.Connect(config)
-		return false, "DB is not available"
 	}
 	return true, "OK"
 }
@@ -107,13 +74,13 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 			response.Button("Подбодрить Машу", "https://dialogs.yandex.ru/store/skills/67b197f0-nedetskie-razgovory", false)
 			return response
 		}
-		answer, _ := v.getAnswer(request.Session.UserID, text)
+		answer, _ := v.GetAnswer(request.Session.UserID, text)
 		response.Text(answer)
 		return response
 	}
 }
 
-func (v Masha) getAnswer(userID string, text string) (string, error) {
+func (v Masha) GetAnswer(userID string, text string) (string, error) {
 	resp, err := v.httpClient.PostForm(
 		v.mashaUrl,
 		url.Values{
@@ -134,33 +101,6 @@ func (v Masha) getAnswer(userID string, text string) (string, error) {
 	}
 	bodyString := string(bodyBytes)
 	return bodyString, nil
-}
-
-func (m Masha) mail() func() {
-	return func() {
-		log.Print("Run cron")
-		results := m.connection.Collection("messages").Find(bson.M{"to": 8800})
-		message := &voice_mail.Message{}
-		for results.Next(message) {
-			log.Printf("Cron message from %d", message.From)
-			question := message.Text
-			answer, err := m.getAnswer(strconv.Itoa(message.From), question)
-			if err != nil {
-				log.Print(err)
-				continue
-			}
-			answerMessage := &voice_mail.Message{To: message.From, From: 8800, Text: answer}
-			err = m.connection.Collection("messages").Save(answerMessage)
-			if err != nil {
-				log.Print(err)
-				continue
-			}
-			err = m.connection.Collection("messages").DeleteDocument(message)
-			if err != nil {
-				log.Printf("Error: %v", err)
-			}
-		}
-	}
 }
 
 func containsIgnoreCase(message string, wordsToCheck []string) bool {

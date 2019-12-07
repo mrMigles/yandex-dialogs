@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"github.com/azzzak/alice"
 	"github.com/go-bongo/bongo"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/robfig/cron/v3"
 	"hash/fnv"
 	"log"
 	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
-	"yandex-dialogs/common"
 )
 
 var acceptWords = []string{"да", "давай", "можно", "плюс", "ага", "угу", "дэ"}
@@ -29,10 +28,6 @@ var blackListWords = []string{"забань", "добавь в черный сп
 var myNumberWords = []string{"мой номер", "какой номер", "меня номер"}
 
 var runSkillWords = []string{"говорящая почта", "говорящую почту", "говорящей почты", "запусти навык"}
-
-var mongoConnection = common.GetEnv("MONGO_CONNECTION", "")
-var databaseName = common.GetEnv("DATABASE_NAME", "voice-mail")
-var encryptKey = common.GetEnv("ENCRYPT_KEY", "")
 
 type User struct {
 	bongo.DocumentBase `bson:",inline"`
@@ -56,26 +51,39 @@ type UserState struct {
 	context *Message
 }
 
+type MailBot interface {
+	CheckMails()
+}
+
 type VoiceMail struct {
-	states     map[string]*UserState
-	mux        sync.Mutex
-	connection *bongo.Connection
+	states      map[string]*UserState
+	mux         sync.Mutex
+	mailService MailService
 }
 
 func NewVoiceMail() VoiceMail {
-	config := &bongo.Config{
-		ConnectionString: mongoConnection,
-		Database:         databaseName,
-	}
-	connection, err := bongo.Connect(config)
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	mailService := NewMailService()
+	initBots(mailService)
 	return VoiceMail{
-		states:     map[string]*UserState{},
-		connection: connection,
+		states:      map[string]*UserState{},
+		mailService: mailService,
 	}
+}
+
+func initBots(service MailService) {
+	var bots []MailBot
+	bots = append(bots, NewMashaBot(service))
+	c := cron.New()
+	for _, bot := range bots {
+		_, err := c.AddFunc("*/1 * * * *", func() {
+			bot.CheckMails()
+		})
+		if err != nil {
+			log.Printf("Error running cron for Masha mail: %+v", err)
+		}
+	}
+	c.Start()
+
 }
 
 func (v VoiceMail) GetPath() string {
@@ -83,14 +91,9 @@ func (v VoiceMail) GetPath() string {
 }
 
 func (v VoiceMail) Health() (result bool, message string) {
-	if v.connection.Session.Ping() != nil {
+	if v.mailService.Ping() != nil {
 		log.Printf("Ping failed")
-		v.connection.Session.Close()
-		config := &bongo.Config{
-			ConnectionString: mongoConnection,
-			Database:         databaseName,
-		}
-		v.connection, _ = bongo.Connect(config)
+		v.mailService.Reconnect()
 		return false, "DB is not available"
 	}
 	return true, "OK"
@@ -99,7 +102,7 @@ func (v VoiceMail) Health() (result bool, message string) {
 func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.Response) *alice.Response {
 	return func(request *alice.Request, response *alice.Response) *alice.Response {
 
-		currentUser := v.findUser(request.Session.UserID)
+		currentUser := v.mailService.findUser(request.Session.UserID)
 
 		// if new user
 		if currentUser == nil {
@@ -119,7 +122,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				BlackList: []int{},
 			}
 			v.states[currentUser.Id] = &UserState{user: currentUser, state: "root"}
-			err = v.connection.Collection("users").Save(currentUser)
+			err = v.mailService.SaveUser(currentUser)
 			if err != nil {
 				response.Text("Произошла ошибка, попробуйте ещё раз")
 				return response
@@ -132,7 +135,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				"Ответьте на данное сообщение, если у вас есть идеи, как можно сделать Говорящую почту лучше. " +
 				"Спасибо, что пользуетесь навыком! " +
 				"Конец связи."}
-			err = v.connection.Collection("messages").Save(helloMessage)
+			err = v.mailService.SendMessage(helloMessage)
 			if err != nil {
 				response.Text("Произошла ошибка, попробуйте ещё раз")
 				return response
@@ -252,7 +255,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 			if currentState.state == "ask_start_listen_mail" {
 				// for yes phrase
 				if containsIgnoreCase(request.Text(), acceptWords) {
-					message := v.getFirstMessage(currentUser)
+					message := v.mailService.ReadMessage(currentUser)
 					if message == nil {
 						response.Text("У вас нет новых сообщений.")
 						response.Button("Отправить", "", true)
@@ -264,10 +267,6 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Text(text)
 					currentState.context = message
 					currentState.state = "ask_continue_listen_mail"
-					err := v.connection.Collection("messages").DeleteDocument(message)
-					if err != nil {
-						log.Printf("Error: %v", err)
-					}
 					response.Button("Дальше", "", true)
 					response.Button("Ответить", "", true)
 					return response
@@ -291,7 +290,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 			if currentState.state == "ask_continue_listen_mail" {
 				// for yes phrase
 				if containsIgnoreCase(request.Text(), acceptWords) || containsIgnoreCase(request.Text(), nextWords) {
-					message := v.getFirstMessage(currentUser)
+					message := v.mailService.ReadMessage(currentUser)
 					if message == nil {
 						response.Text("У вас нет новых сообщений.")
 						currentState.state = "root"
@@ -304,10 +303,6 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Text(text)
 					currentState.state = "ask_continue_listen_mail"
 					currentState.context = message
-					err := v.connection.Collection("messages").DeleteDocument(message)
-					if err != nil {
-						log.Printf("Error: %v", err)
-					}
 					response.Button("Дальше", "", true)
 					response.Button("Ответить", "", true)
 					return response
@@ -377,7 +372,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 			if currentState.state == "ask_after_black_list" {
 				// for yes phrase
 				if containsIgnoreCase(request.Text(), acceptWords) || containsIgnoreCase(request.Text(), nextWords) {
-					message := v.getFirstMessage(currentUser)
+					message := v.mailService.ReadMessage(currentUser)
 					if message == nil {
 						response.Text("У вас нет новых сообщений.")
 						currentState.state = "root"
@@ -387,10 +382,6 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Text(text)
 					currentState.state = "ask_continue_listen_mail"
 					currentState.context = message
-					err := v.connection.Collection("messages").DeleteDocument(message)
-					if err != nil {
-						log.Printf("Error: %v", err)
-					}
 					response.Button("Дальше", "", true)
 					response.Button("Ответить", "", true)
 					return response
@@ -477,14 +468,14 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				// for yes phrase
 				if containsIgnoreCase(request.Text(), acceptWords) || containsIgnoreCase(request.Text(), sendWords) {
 					currentState.state = "root"
-					err := v.connection.Collection("messages").Save(currentState.context)
+					err := v.mailService.SendMessage(currentState.context)
 					if err != nil {
 						response.Text("Произошла ошибка, попробуйте ещё раз")
 						response.Button("Отмена", "", true)
 						return response
 					}
 					currentUser.LastNumber = currentState.context.To
-					err = v.connection.Collection("users").Save(currentUser)
+					err = v.mailService.SaveUser(currentUser)
 					if err != nil {
 						response.Text("Произошла ошибка, попробуйте ещё раз")
 						response.Button("Отмена", "", true)
@@ -530,40 +521,9 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 		return response
 	}
 }
-func (v VoiceMail) getFirstMessage(currentUser *User) *Message {
-	message := &Message{}
-	err := v.connection.Collection("messages").FindOne(bson.M{"to": currentUser.Number}, message)
-
-	if err != nil {
-		log.Printf("Messages for user %d not found", currentUser.Number)
-		return nil
-	} else {
-		log.Printf("Found message %v for user %d", message.GetId(), currentUser.Number)
-	}
-	return message
-}
 
 func (v VoiceMail) getCountOfMessages(currentUser *User) int {
-	results := v.connection.Collection("messages").Find(bson.M{"to": currentUser.Number})
-	count := 0
-	message := &Message{}
-	for results.Next(message) {
-		count++
-	}
-	return count
-}
-
-func (v VoiceMail) findUser(userId string) *User {
-	user := &User{}
-	err := v.connection.Collection("users").FindOne(bson.M{"id": userId}, user)
-
-	if err != nil {
-		log.Printf("User %s not found", userId)
-		return nil
-	} else {
-		log.Printf("Found user: %+v", user)
-	}
-	return user
+	return len(v.mailService.GetMessagesForUser(currentUser))
 }
 
 func containsIgnoreCase(message string, wordsToCheck []string) bool {
@@ -590,33 +550,16 @@ func (v VoiceMail) generateNumber(userId string) (int, error) {
 	rand.Seed(int64(hash(userId)))
 	number := 1000 + rand.Intn(9999-1000)
 	defer v.mux.Unlock()
-	number, err, done := checkAndGenerateId(v, number)
+	number, err, done := v.mailService.checkAndGenerateId(number)
 	if done {
 		return number, err
 	}
 	number = 10000 + rand.Intn(99999-10000)
-	number, err, done = checkAndGenerateId(v, number)
+	number, err, done = v.mailService.checkAndGenerateId(number)
 	if done {
 		return number, err
 	}
 	return 0, errors.New("COLLISION error when generating unique id")
-}
-
-func checkAndGenerateId(v VoiceMail, number int) (int, error, bool) {
-	for i := 0; i < 10; i++ {
-		user := &User{}
-		err := v.connection.Collection("users").FindOne(bson.M{"number": number}, user)
-		if err != nil {
-			if _, ok := err.(*bongo.DocumentNotFoundError); ok {
-				return number, nil, true
-			} else {
-				log.Print("real error " + err.Error())
-				return 0, err, true
-			}
-		}
-		number++
-	}
-	return 0, nil, false
 }
 
 func (v VoiceMail) printNumber(number int) string {
