@@ -68,12 +68,12 @@ func (m MailService) ReadMessage(user *User) *Message {
 	return message
 }
 
-func (m MailService) GetMessagesForUser(user *User) []*Message {
+func (m MailService) GetMessagesForUser(user *User) []Message {
 	results := m.connection.Collection("messages").Find(bson.M{"to": user.Number})
-	var messages []*Message
+	var messages []Message
 	message := &Message{}
 	for results.Next(message) {
-		messages = append(messages, message)
+		messages = append(messages, *message)
 	}
 	return messages
 }

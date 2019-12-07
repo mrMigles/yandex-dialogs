@@ -33,9 +33,13 @@ func (m MashaBot) CheckMails() {
 			log.Print(err)
 			continue
 		}
-		err = m.mailService.DeleteMessage(message)
+		err = m.mailService.DeleteMessage(&message)
 		if err != nil {
 			log.Printf("Error: %v", err)
 		}
 	}
+}
+
+func (m MashaBot) GetCron() string {
+	return "*/5 * * * *"
 }

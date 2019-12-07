@@ -26,6 +26,8 @@ var repeatWords = []string{"повтор", "расслышал"}
 var checkMailWords = []string{"открой почту", "сообщения", "входящие", "проверь почту", "проверить почту", "что там у меня", "есть новые сообщения", "письма", "ящик", "проверь", "проверить"}
 var blackListWords = []string{"забань", "добавь в черный список", "черный список", "чёрный список"}
 var myNumberWords = []string{"мой номер", "какой номер", "меня номер"}
+var reviewWords = []string{"отзыв", "предложение", "оценк"}
+var datingWords = []string{"знакомство", "случайн", "рандом", "наугад"}
 
 var runSkillWords = []string{"говорящая почта", "говорящую почту", "говорящей почты", "запусти навык"}
 
@@ -53,6 +55,7 @@ type UserState struct {
 
 type MailBot interface {
 	CheckMails()
+	GetCron() string
 }
 
 type VoiceMail struct {
@@ -73,9 +76,10 @@ func NewVoiceMail() VoiceMail {
 func initBots(service MailService) {
 	var bots []MailBot
 	bots = append(bots, NewMashaBot(service))
+	bots = append(bots, NewDatingBot(service))
 	c := cron.New()
 	for _, bot := range bots {
-		_, err := c.AddFunc("*/1 * * * *", func() {
+		_, err := c.AddFunc(bot.GetCron(), func() {
 			bot.CheckMails()
 		})
 		if err != nil {
@@ -144,6 +148,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 			response.Text(fmt.Sprintf("Добро пожаловать в говорящую почту! Ваш почтовый номер: %s."+
 				" Поделитесь этим номером с друзьями, и они смогут присылать вам сообщения."+
 				" Сейчас вы можете отправить новое сообщение или проверить почту, просто скажите это."+
+				" Вы, также, можете завести новые знакомства, отправив сообщение случайному пользователю из числа тех, кто отправил аналогичное слуайное сообщение."+
 				" Если появятся вопросы, скажите - помощь, или задайте вопрос."+
 				" С чего начнём?", v.printNumber(currentUser.Number)))
 			response.Button("Отправить", "", true)
@@ -202,10 +207,11 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					currentState.state = "ask_send_number"
 					currentState.context = &Message{From: currentUser.Number}
 					response.Text("Назовите номер получателя")
-					if currentUser.LastNumber > 0 {
+					if currentUser.LastNumber > 0 && currentUser.LastNumber != 1000 {
 						response.Button(v.printNumber(currentUser.LastNumber), "", true)
 					}
-					response.Button("1-0-0-0", "", true)
+					response.Button("Случайное знакомство", "", true)
+					response.Button("Оставить отзыв", "", true)
 					response.Button("Отмена", "", true)
 					return response
 				}
@@ -356,7 +362,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						return response
 					}
 					currentUser.BlackList = append(currentUser.BlackList, currentState.context.From)
-
+					v.mailService.SaveUser(currentUser)
 					text := fmt.Sprintf("Номер %s был добавлен в черный список. Для того, чтобы очистить список, просто скажите - очистить черный список. "+
 						"Хотите продолжить прослушивание сообщений?", v.printNumber(currentState.context.From))
 					response.Text(text)
@@ -410,21 +416,33 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					currentState.state = "root"
 					return response
 				}
-				var number string
-				tokens := request.Tokens()
-				for _, num := range tokens {
-					number += num
-				}
-				to, err := strconv.Atoi(number)
-				if err != nil {
-					response.Text("Вам нужно назвать четырёхзначный номер получателя, или скажите - отмена, чтобы вернуться в главное меню.")
-					response.Button("Отмена", "", true)
-					return response
+				var to int
+				if containsIgnoreCase(request.Text(), reviewWords) {
+					to = 1000
+				} else if containsIgnoreCase(request.Text(), datingWords) {
+					to = 7070
+				} else {
+					var number string
+					tokens := request.Tokens()
+					for _, num := range tokens {
+						number += num
+					}
+					var err error
+					to, err = strconv.Atoi(number)
+					if err != nil {
+						response.Text("Вам нужно назвать четырёхзначный номер получателя. " +
+							"Вы также можете отправить сообщение случайному пользователю или оставить отзыв, просто скажите об этом. " +
+							"Скажите - отмена, чтобы вернуться.")
+						response.Button("Отмена", "", true)
+						return response
+					}
 				}
 				currentState.context.To = to
 				text := fmt.Sprintf("Произнесите текст сообщения")
 				if to == 1000 {
 					text = fmt.Sprintf("Произнесите текст отзыва или предложения")
+				} else if to == 7070 {
+					text = fmt.Sprintf("Произнесите текст сообщения для случайного пользователя")
 				}
 				response.Text(text)
 				currentState.state = "ask_send_text"
