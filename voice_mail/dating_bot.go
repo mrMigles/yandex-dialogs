@@ -11,7 +11,6 @@ type DatingBot struct {
 }
 
 func NewDatingBot(service MailService) DatingBot {
-	rand.Seed(time.Now().Unix())
 	return DatingBot{mailService: service}
 }
 
@@ -19,16 +18,18 @@ func (m DatingBot) CheckMails() {
 	log.Print("Run Dating cron")
 	sentMessages := map[int]map[int]struct{}{}
 	messages := m.mailService.GetMessagesForUser(&User{Number: 7070})
+	freeDateUsers := m.mailService.GetDateFreeUsers()
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(freeDateUsers), func(i, j int) { freeDateUsers[i], freeDateUsers[j] = freeDateUsers[j], freeDateUsers[i] })
 	for _, message := range messages {
-		for i := 1; i <= len(messages); i++ {
-			toMessage := messages[rand.Intn(len(messages))]
-			if message.From != toMessage.From {
+		for _, user := range freeDateUsers {
+			if message.From != user.Number {
 				if from, ok := sentMessages[message.From]; ok {
-					if _, ok := from[toMessage.From]; ok {
+					if _, ok := from[user.Number]; ok {
 						continue
 					}
 				}
-				message.To = toMessage.From
+				message.To = user.Number
 				err := m.mailService.SendMessage(&message)
 				if err != nil {
 					log.Printf("Error with loop %v", err)
@@ -44,5 +45,5 @@ func (m DatingBot) CheckMails() {
 }
 
 func (m DatingBot) GetCron() string {
-	return "0 */8 * * *"
+	return "0 * * * *"
 }

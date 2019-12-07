@@ -91,6 +91,26 @@ func (m MailService) findUser(userId string) *User {
 	return user
 }
 
+func (m MailService) GetDateFreeUsers() []User {
+	results := m.connection.Collection("users").Find(bson.M{"datefree": true})
+	var users []User
+	user := &User{}
+	for results.Next(user) {
+		users = append(users, *user)
+	}
+	return users
+}
+
+func (m MailService) GetReviewUsers() []User {
+	results := m.connection.Collection("users").Find(bson.M{"reviewed": true})
+	var users []User
+	user := &User{}
+	for results.Next(user) {
+		users = append(users, *user)
+	}
+	return users
+}
+
 func (m MailService) checkAndGenerateId(number int) (int, error, bool) {
 	for i := 0; i < 10; i++ {
 		user := &User{}

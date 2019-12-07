@@ -38,6 +38,9 @@ type User struct {
 	Id                 string `json:"-,"`
 	BlackList          []int  `json:"-,"`
 	LastNumber         int    `json:"-,"`
+	PreLastNumber      int    `json:"-,"`
+	DateFree           bool   `json:"-,"`
+	Reviewed           bool   `json:"-,"`
 }
 
 type Message struct {
@@ -74,18 +77,16 @@ func NewVoiceMail() VoiceMail {
 }
 
 func initBots(service MailService) {
-	var bots []MailBot
-	bots = append(bots, NewMashaBot(service))
-	bots = append(bots, NewDatingBot(service))
+	mashaBot := NewMashaBot(service)
+	datingBot := NewDatingBot(service)
 	c := cron.New()
-	for _, bot := range bots {
-		_, err := c.AddFunc(bot.GetCron(), func() {
-			bot.CheckMails()
-		})
-		if err != nil {
-			log.Printf("Error running cron for Masha mail: %+v", err)
-		}
-	}
+
+	c.AddFunc(mashaBot.GetCron(), func() {
+		mashaBot.CheckMails()
+	})
+	c.AddFunc(datingBot.GetCron(), func() {
+		datingBot.CheckMails()
+	})
 	c.Start()
 
 }
@@ -210,6 +211,9 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Text("Назовите номер получателя")
 					if currentUser.LastNumber > 0 && currentUser.LastNumber != 1000 {
 						response.Button(v.printNumber(currentUser.LastNumber), "", true)
+					}
+					if currentUser.PreLastNumber > 0 && currentUser.PreLastNumber != 1000 {
+						response.Button(v.printNumber(currentUser.PreLastNumber), "", true)
 					}
 					response.Button("Случайное знакомство", "", true)
 					response.Button("Оставить отзыв", "", true)
@@ -493,7 +497,15 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						response.Button("Отмена", "", true)
 						return response
 					}
-					currentUser.LastNumber = currentState.context.To
+					if currentState.context.To == 1000 {
+						currentUser.Reviewed = true
+					} else if currentState.context.To == 7070 {
+						currentUser.DateFree = true
+					} else {
+						currentUser.PreLastNumber = currentUser.LastNumber
+						currentUser.LastNumber = currentState.context.To
+					}
+
 					err = v.mailService.SaveUser(currentUser)
 					if err != nil {
 						response.Text("Произошла ошибка, попробуйте ещё раз")
