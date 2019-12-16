@@ -20,8 +20,8 @@ func (m DatingBot) CheckMails() {
 	messages := m.mailService.GetMessagesForUser(&User{Number: 7070})
 	freeDateUsers := m.mailService.GetDateFreeUsers()
 	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(freeDateUsers), func(i, j int) { freeDateUsers[i], freeDateUsers[j] = freeDateUsers[j], freeDateUsers[i] })
 	for _, message := range messages {
+		rand.Shuffle(len(freeDateUsers), func(i, j int) { freeDateUsers[i], freeDateUsers[j] = freeDateUsers[j], freeDateUsers[i] })
 		for _, user := range freeDateUsers {
 			if message.From != user.Number {
 				if from, ok := sentMessages[message.From]; ok {
