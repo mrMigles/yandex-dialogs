@@ -554,7 +554,8 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 			return response
 		}
 
-		response.Text(request.OriginalUtterance())
+		response.Text("Произошла ошибка, попробуйте позже")
+		response.Button("Закончить", "", true)
 		return response
 	}
 }

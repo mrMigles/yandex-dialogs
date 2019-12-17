@@ -1,6 +1,7 @@
 package voice_mail
 
 import (
+	"errors"
 	"github.com/go-bongo/bongo"
 	"gopkg.in/mgo.v2/bson"
 	"log"
@@ -41,7 +42,15 @@ func (m MailService) Reconnect() {
 }
 
 func (m MailService) Ping() error {
-	return m.connection.Session.Ping()
+	var err error
+	defer func() {
+		if r := recover(); r != nil {
+			log.Print("Recovered in f", r)
+			err = errors.New("Error ping")
+		}
+	}()
+	err = m.connection.Session.Ping()
+	return err
 }
 
 func (m MailService) SaveUser(user *User) error {
