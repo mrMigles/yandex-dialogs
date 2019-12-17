@@ -64,7 +64,7 @@ type MailBot interface {
 type VoiceMail struct {
 	states      map[string]*UserState
 	mux         sync.Mutex
-	mailService MailService
+	mailService *MailService
 }
 
 func NewVoiceMail() VoiceMail {
@@ -76,7 +76,7 @@ func NewVoiceMail() VoiceMail {
 	}
 }
 
-func initBots(service MailService) {
+func initBots(service *MailService) {
 	mashaBot := NewMashaBot(service)
 	datingBot := NewDatingBot(service)
 	c := cron.New()
@@ -106,7 +106,13 @@ func (v VoiceMail) Health() (result bool, message string) {
 
 func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.Response) *alice.Response {
 	return func(request *alice.Request, response *alice.Response) *alice.Response {
-
+		defer func() {
+			if r := recover(); r != nil {
+				log.Print("Recovered in f", r)
+				response.Text("Произошла ошибка, попробуйте в другой раз")
+				response.Button("Закончить", "", true)
+			}
+		}()
 		currentUser := v.mailService.findUser(request.Session.UserID)
 
 		// if new user

@@ -7,11 +7,11 @@ import (
 )
 
 type MashaBot struct {
-	mailService MailService
+	mailService *MailService
 	mashaSkill  masha.Masha
 }
 
-func NewMashaBot(service MailService) MashaBot {
+func NewMashaBot(service *MailService) MashaBot {
 	mashaSkill := masha.NewMasha(5000)
 	return MashaBot{mailService: service, mashaSkill: mashaSkill}
 }

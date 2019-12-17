@@ -15,7 +15,7 @@ type MailService struct {
 	connection *bongo.Connection
 }
 
-func NewMailService() MailService {
+func NewMailService() *MailService {
 	config := &bongo.Config{
 		ConnectionString: mongoConnection,
 		Database:         databaseName,
@@ -25,12 +25,14 @@ func NewMailService() MailService {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return MailService{connection: connection}
+	return &MailService{connection: connection}
 }
 
 func (m MailService) Reconnect() {
 	log.Printf("Reconnect")
-	m.connection.Session.Close()
+	if m.connection != nil && m.connection.Session != nil {
+		m.connection.Session.Close()
+	}
 	config := &bongo.Config{
 		ConnectionString: mongoConnection,
 		Database:         databaseName,

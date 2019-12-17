@@ -7,10 +7,10 @@ import (
 )
 
 type DatingBot struct {
-	mailService MailService
+	mailService *MailService
 }
 
-func NewDatingBot(service MailService) DatingBot {
+func NewDatingBot(service *MailService) DatingBot {
 	return DatingBot{mailService: service}
 }
 
