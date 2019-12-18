@@ -21,26 +21,28 @@ var nextWords = []string{"дальше", "еще", "ещё", "еше", "след
 var cancelWords = []string{"отмена", "хватит", "все", "всё", "закончи", "закончить", "выход", "выйди", "выйти"}
 var newMessageWords = []string{"новое сообщение", "новое письмо", "отправить", "отправь", "письмо"}
 var sendWords = []string{"отправить", "отправляй", "запускай"}
+var phoneBookWord = []string{"добавить", "книг", "записн", "книжк"}
 var replyWords = []string{"ответить", "ответ", "reply"}
 var repeatWords = []string{"повтор", "расслышал"}
 var checkMailWords = []string{"открой почту", "сообщения", "входящие", "проверь почту", "проверить почту", "что там у меня", "есть новые сообщения", "письма", "ящик", "проверь", "проверить"}
 var blackListWords = []string{"забань", "добавь в черный список", "черный список", "чёрный список"}
 var myNumberWords = []string{"мой номер", "какой номер", "меня номер"}
 var reviewWords = []string{"отзыв", "предложение", "оценк"}
-var datingWords = []string{"знакомство", "случайн", "рандом", "наугад"}
+var datingWords = []string{"знаком", "случайн", "рандом", "наугад"}
 
 var runSkillWords = []string{"говорящая почта", "говорящую почту", "говорящей почты", "запусти навык"}
 
 type User struct {
 	bongo.DocumentBase `bson:",inline"`
-	Number             int    `json:"-,"`
-	Name               string `json:"-,"`
-	Id                 string `json:"-,"`
-	BlackList          []int  `json:"-,"`
-	LastNumber         int    `json:"-,"`
-	PreLastNumber      int    `json:"-,"`
-	DateFree           bool   `json:"-,"`
-	Reviewed           bool   `json:"-,"`
+	Number             int            `json:"-,"`
+	Name               string         `json:"-,"`
+	Id                 string         `json:"-,"`
+	BlackList          []int          `json:"-,"`
+	LastNumber         int            `json:"-,"`
+	PreLastNumber      int            `json:"-,"`
+	DateFree           bool           `json:"-,"`
+	Reviewed           bool           `json:"-,"`
+	PhoneBook          map[string]int `json:"-,"`
 }
 
 type Message struct {
@@ -214,7 +216,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				if containsIgnoreCase(request.Text(), newMessageWords) {
 					currentState.state = "ask_send_number"
 					currentState.context = &Message{From: currentUser.Number}
-					response.Text("Назовите номер получателя")
+					response.Text("Назовите номер получателя или имя из записной книжки")
 					if currentUser.LastNumber > 0 && currentUser.LastNumber != 1000 {
 						response.Button(v.printNumber(currentUser.LastNumber), "", true)
 					}
@@ -232,6 +234,20 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Text(fmt.Sprintf("Ваш номер: %s", v.printNumber(currentUser.Number)))
 					response.Button("Отправить", "", true)
 					response.Button("Выйти", "", true)
+					return response
+				}
+
+				// for phone book words
+				if containsIgnoreCase(request.Text(), phoneBookWord) {
+					if currentState.context == nil || currentState.context.To == 0 {
+						response.Text("Вы должны отправить сообщение на номер, перед тем как добавить его в записную книжку.")
+						response.Button("Отправить", "", true)
+						response.Button("Проверить почту", "", true)
+						currentState.state = "root"
+						return response
+					}
+					response.Text(fmt.Sprintf("Произнесите имя для номера %s в записной книжке", v.printNumber(currentState.context.To)))
+					currentState.state = "ask_phone_username"
 					return response
 				}
 
@@ -441,11 +457,15 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					var err error
 					to, err = strconv.Atoi(number)
 					if err != nil {
-						response.Text("Вам нужно назвать четырёхзначный номер получателя. " +
-							"Вы также можете отправить сообщение случайному пользователю на номер 70-70, или оставить отзыв по номеру 1-0-0-0, просто скажите об этом. " +
-							"Скажите - отмена, чтобы вернуться.")
-						response.Button("Отмена", "", true)
-						return response
+						if number, ok := currentUser.PhoneBook[strings.ToUpper(request.Text())]; ok {
+							to = number
+						} else {
+							response.Text("Вам нужно назвать четырёхзначный номер получателя или имя из записной книжки. " +
+								"Вы также можете отправить сообщение случайному пользователю на номер 70-70, или оставить отзыв по номеру 1-0-0-0, просто скажите об этом. " +
+								"Скажите - отмена, чтобы вернуться.")
+							response.Button("Отмена", "", true)
+							return response
+						}
 					}
 				}
 				currentState.context.To = to
@@ -518,13 +538,21 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						response.Button("Отмена", "", true)
 						return response
 					}
-					response.Text("Сообщение отправлено! Хотите что-то ещё?")
-					response.Button("Проверить почту", "", true)
-					response.Button("Нет", "", true)
 					if currentState.context.To == 1000 {
+						response.Text("Спасибо за отзыв! Вы также можете оставить свой отзыв в Яндекс каталоге навыков.")
 						response.Button("Оценить навык", "https://dialogs.yandex.ru/store/skills/eacbce8f-govoryashaya-po", false)
+						response.Button("Проверить почту", "", true)
+					} else if currentState.context.To != 7070 && phoneBookedNumber(currentUser, currentState.context.To) == nil {
+						response.Text("Сообщение отправлено! Вы можете добавить номер в записную книжку. Хотите что то ещё?")
+						response.Button("Добавить в записную книжку", "", true)
+						response.Button("Проверить почту", "", true)
+						response.Button("Нет", "", true)
+						return response
+					} else {
+						response.Text("Сообщение отправлено! Хотите что-то ещё?")
+						response.Button("Проверить почту", "", true)
+						response.Button("Нет", "", true)
 					}
-					currentState.context = nil
 					return response
 				}
 
@@ -545,19 +573,76 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				return response
 			}
 
-		} else {
-			v.states[currentUser.Id] = &UserState{user: currentUser, state: "root"}
-			response.Text("Что пожелаете?")
-			response.Button("Отправить новое сообщение", "", true)
-			response.Button("Проверить почту", "", true)
-			response.Button("Помощь", "", true)
-			return response
+			if currentState.state == "ask_phone_username" {
+				if currentState.context == nil {
+					response.Text("Произошла ошибка, попробуйте ещё раз")
+					currentState.state = "root"
+					response.Button("Проверить почту", "", true)
+					response.Button("Выйти", "", true)
+					return response
+				}
+				// for yes phrase
+				if containsIgnoreCase(request.Text(), datingWords) || containsIgnoreCase(request.Text(), reviewWords) {
+					response.Text("Вы не можете использовать это имя, пожалуйста, назовите другое.")
+					response.Button("Отмена", "", true)
+					return response
+				}
+
+				// for no phrase
+				if containsIgnoreCase(request.Text(), negativeWords) || containsIgnoreCase(request.Text(), cancelWords) {
+					currentState.state = "root"
+					currentState.context = nil
+					response.Text("Окей, хотите что-то ещё?")
+					response.Button("Отправить новое", "", true)
+					response.Button("Проверить почту", "", true)
+					response.Button("Нет", "", true)
+					return response
+				}
+
+				if request.Text() != "" {
+					currentUser.PhoneBook[strings.ToUpper(request.Text())] = currentState.context.To
+					err := v.mailService.SaveUser(currentUser)
+					if err != nil {
+						response.Text("Произошла ошибка, попробуйте ещё раз")
+						response.Button("Выйти", "", true)
+						return response
+					}
+					response.Text(fmt.Sprintf("Для номера: %s, установлено имя: %s, вы можете использовать его для отправки сообщений. Хотите что то ещё?", v.printNumber(currentState.context.To), request.Text()))
+					response.Button("Отправить новое", "", true)
+					response.Button("Проверить почту", "", true)
+					response.Button("Выйти", "", true)
+					currentState.context = nil
+					currentState.state = "root"
+					return response
+				}
+
+				response.Text(fmt.Sprintf("Назовите имя для номера - %s", v.printNumber(currentState.context.To)))
+				response.Button("Да", "", true)
+				response.Button("Отмена", "", true)
+				return response
+			} else {
+				v.states[currentUser.Id] = &UserState{user: currentUser, state: "root"}
+				response.Text("Что пожелаете?")
+				response.Button("Отправить новое сообщение", "", true)
+				response.Button("Проверить почту", "", true)
+				response.Button("Помощь", "", true)
+				return response
+			}
 		}
 
 		response.Text("Произошла ошибка, попробуйте позже")
 		response.Button("Закончить", "", true)
 		return response
 	}
+}
+
+func phoneBookedNumber(user *User, to int) *string {
+	for name, number := range user.PhoneBook {
+		if number == to {
+			return &name
+		}
+	}
+	return nil
 }
 
 func (v VoiceMail) getCountOfMessages(currentUser *User) int {
