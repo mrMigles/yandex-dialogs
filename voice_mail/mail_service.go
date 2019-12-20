@@ -23,6 +23,9 @@ func NewMailService() *MailService {
 		Database:         databaseName,
 	}
 	connection, err := bongo.Connect(config)
+	connection, _ = bongo.Connect(config)
+	connection.Session.SetPoolLimit(50)
+	connection.Session.SetMode(mgo.Monotonic, true)
 
 	if err != nil {
 		log.Fatal(err)
