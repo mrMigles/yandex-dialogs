@@ -3,6 +3,7 @@ package voice_mail
 import (
 	"errors"
 	"github.com/go-bongo/bongo"
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
 	"yandex-dialogs/common"
@@ -39,6 +40,8 @@ func (m MailService) Reconnect() {
 		Database:         databaseName,
 	}
 	m.connection, _ = bongo.Connect(config)
+	m.connection.Session.SetPoolLimit(50)
+	m.connection.Session.SetMode(mgo.Monotonic, true)
 }
 
 func (m MailService) Ping() error {
