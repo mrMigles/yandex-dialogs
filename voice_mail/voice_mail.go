@@ -107,15 +107,22 @@ func (v VoiceMail) Health() (result bool, message string) {
 }
 
 func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.Response) *alice.Response {
-	return func(request *alice.Request, response *alice.Response) *alice.Response {
+	return func(request *alice.Request, response *alice.Response) (resp *alice.Response) {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Print("Recovered in f", r)
+				log.Print("Recovered in f: ", r)
 				response.Text("Произошла ошибка, попробуйте в другой раз")
 				response.Button("Закончить", "", true)
+				resp = response
 			}
 		}()
-		currentUser := v.mailService.findUser(request.Session.UserID)
+		v.Health()
+		currentUser, err := v.mailService.findUser(request.Session.UserID)
+		if err != nil {
+			response.Text("Произошла ошибка, попробуйте в другой раз")
+			response.Button("Закончить", "", true)
+			return response
+		}
 
 		// if new user
 		if currentUser == nil {
@@ -126,7 +133,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 			number, err := v.generateNumber(request.Session.UserID)
 			if err != nil {
 				response.Text("Произошла ошибка, попробуйте в другой раз")
-				response.EndSession()
+				response.Button("Закончить", "", true)
 				return response
 			}
 			currentUser = &User{

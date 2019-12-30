@@ -3,9 +3,9 @@ package voice_mail
 import (
 	"errors"
 	"github.com/go-bongo/bongo"
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
+	"net"
 	"yandex-dialogs/common"
 )
 
@@ -23,32 +23,22 @@ func NewMailService() *MailService {
 		Database:         databaseName,
 	}
 	connection, err := bongo.Connect(config)
-	connection, _ = bongo.Connect(config)
-	connection.Session.SetPoolLimit(50)
-	connection.Session.SetMode(mgo.Monotonic, true)
-
 	if err != nil {
 		log.Fatal(err)
 	}
+	connection.Session.SetPoolLimit(50)
 	return &MailService{connection: connection}
 }
 
 func (m MailService) Reconnect() {
-	log.Printf("Reconnect")
-	if m.connection != nil && m.connection.Session != nil {
-		m.connection.Session.Close()
+	err := m.connection.Connect()
+	if err != nil {
+		log.Print(err)
 	}
-	config := &bongo.Config{
-		ConnectionString: mongoConnection,
-		Database:         databaseName,
-	}
-	m.connection, _ = bongo.Connect(config)
 	m.connection.Session.SetPoolLimit(50)
-	m.connection.Session.SetMode(mgo.Monotonic, true)
 }
 
-func (m MailService) Ping() error {
-	var err error
+func (m MailService) Ping() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Print("Recovered in f", r)
@@ -95,17 +85,21 @@ func (m MailService) GetMessagesForUser(user *User) []Message {
 	return messages
 }
 
-func (m MailService) findUser(userId string) *User {
+func (m MailService) findUser(userId string) (*User, error) {
 	user := &User{}
 	err := m.connection.Collection("users").FindOne(bson.M{"id": userId}, user)
 
 	if err != nil {
+		var netError *net.OpError
+		if errors.As(err, netError) {
+			return nil, err
+		}
 		log.Printf("User %s not found", userId)
-		return nil
+		return nil, nil
 	} else {
 		log.Printf("Found user: %+v", user)
 	}
-	return user
+	return user, nil
 }
 
 func (m MailService) GetDateFreeUsers() []User {

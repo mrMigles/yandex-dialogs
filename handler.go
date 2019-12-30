@@ -61,7 +61,6 @@ func handleRequest(f func(request *alice.Request, response *alice.Response) *ali
 			return
 		}
 		resp := initResponse(respPool, req)
-
 		if req.Request.OriginalUtterance != "ping" {
 			resp = f(req, resp)
 			if stats, ok := statistics[r.RequestURI]; ok {
