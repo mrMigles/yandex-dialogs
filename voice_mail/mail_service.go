@@ -90,8 +90,7 @@ func (m MailService) findUser(userId string) (*User, error) {
 	err := m.connection.Collection("users").FindOne(bson.M{"id": userId}, user)
 
 	if err != nil {
-		var netError *net.OpError
-		if errors.As(err, netError) {
+		if _, ok := err.(*net.OpError); ok {
 			return nil, err
 		}
 		log.Printf("User %s not found", userId)
