@@ -14,7 +14,7 @@ import (
 	"yandex-dialogs/common"
 )
 
-var mongoConnection = common.GetEnv("MONGO_CONNECTION", "")
+var mongoConnection = common.GetEnv("COMMON_MONGO_CONNECTION", "")
 var databaseName = common.GetEnv("COMMON_DATABASE_NAME", "common")
 var statusCache = cache.New(5*time.Minute, 10*time.Minute)
 
@@ -113,7 +113,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 
 		if containsIgnoreCase(request.Text(), cancelWords) {
 			text := endSkillWords[rand.Intn(len(endSkillWords))]
-			response.Text(text + " Скажи - закончить, чтобы я заткнулся.")
+			response.Text(text + " Скажи - закончить, чтобы я отключился.")
 			response.Button("Оценить навык", "https://dialogs.yandex.ru/store/skills", false)
 			response.Button("Закончить", "", false)
 			return response
