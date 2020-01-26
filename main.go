@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"yandex-dialogs/common"
+	"yandex-dialogs/coronavirus"
 	"yandex-dialogs/masha"
 	"yandex-dialogs/phrases_generator"
 	"yandex-dialogs/voice_mail"
@@ -42,6 +43,7 @@ func buildHandlers() []Dialog {
 	dialogs = append(dialogs, phrases_generator.NewDialog())
 	dialogs = append(dialogs, voice_mail.NewVoiceMail())
 	dialogs = append(dialogs, masha.NewMasha(2700))
+	dialogs = append(dialogs, coronavirus.NewCoronavirus())
 	return dialogs
 }
 
