@@ -19,6 +19,7 @@ var databaseName = common.GetEnv("COMMON_DATABASE_NAME", "common")
 var statusCache = cache.New(5*time.Minute, 10*time.Minute)
 
 var acceptNews = []string{"да", "давай", "можно", "плюс", "ага", "угу", "дэ", "новости", "что в мире", "коронавирус"}
+var helpWords = []string{"помощь", "что ты може", "что ты умеешь"}
 var cancelWords = []string{"отмена", "хватит", "все", "всё", "закончи", "закончить", "выход", "выйди", "выйти"}
 var runSkillWords = []string{"Хрен знает, выживший, на кой ляд тебе этот коронавирус сдался, но я в чужие дела не лезу.", "Здорово, выживший!", "Поздравляю, вы всё ещё живы! А тем временем", "Добро, выживший!", "Приветствую, выживший!"}
 var endSkillWords = []string{"Удачи, выживший!", "Ну бывай, выживший!", "Не хворай, выживший!", "Не болей, выживший!"}
@@ -97,6 +98,12 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 		c.Health()
 
 		currentStatus := c.GetDayStatus()
+
+		if containsIgnoreCase(request.Text(), helpWords) {
+			response.Text("Это твой личный гид в хроники коронавируса. Полезная хреновина, которая помогает подготовиться на случай возможной эпидемии. А если и так, то хоть будешь знать, когда консервы покупать, хе-хе-хе... Просто слушай сводку за день и следуй указаниям навыка.")
+			response.Button("Выйти", "", true)
+			return response
+		}
 
 		if containsIgnoreCase(request.Text(), acceptNews) {
 			response.Text(currentStatus.Full)
