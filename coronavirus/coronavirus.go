@@ -21,7 +21,7 @@ var statusCache = cache.New(5*time.Minute, 10*time.Minute)
 var acceptNews = []string{"да", "давай", "можно", "плюс", "ага", "угу", "дэ", "новости", "что в мире", "коронавирус"}
 var helpWords = []string{"помощь", "что ты може", "что ты умеешь"}
 var cancelWords = []string{"отмена", "хватит", "все", "всё", "закончи", "закончить", "выход", "выйди", "выйти"}
-var runSkillWords = []string{"Хрен знает, выживший, на кой ляд тебе этот коронавирус сдался, но я в чужие дела не лезу.", "Здорово, выживший!", "Поздравляю, вы всё ещё живы! А тем временем", "Добро, выживший!", "Приветствую, выживший!"}
+var runSkillWords = []string{"Хрен знает, выживший, на кой ляд тебе этот коронавирус сдался, но я в чужие дела не лезу.", "Здравствуй, выживший!", "Поздравляю, вы всё ещё живы! А тем временем", "Добро, выживший!", "Приветствую, выживший!"}
 var endSkillWords = []string{"Удачи, выживший!", "Ну бывай, выживший!", "Не хворай, выживший!", "Не болей, выживший!"}
 var newsWords = []string{"Хочешь послушать полную сводку?", "Послушаешь подробно?", "Рассказать подробнее?"}
 
@@ -127,7 +127,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 		text += " "
 		text += newsWords[rand.Intn(len(newsWords))]
 		response.Text(text)
-		response.Button("Новости", "", false)
+		response.Button("Да, давай новости", "", false)
 		response.Button("Выйти", "", false)
 		return response
 	}
