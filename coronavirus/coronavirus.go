@@ -114,7 +114,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 		if containsIgnoreCase(request.Text(), cancelWords) {
 			text := endSkillWords[rand.Intn(len(endSkillWords))]
 			response.Text(text + " Скажи - закончить, чтобы я отключился.")
-			response.Button("Оценить навык", "https://dialogs.yandex.ru/store/skills", false)
+			response.Button("Оценить навык", "https://dialogs.yandex.ru/store/skills/d5087c0d-hroniki-koronavirusa", false)
 			response.Button("Закончить", "", false)
 			return response
 		}
