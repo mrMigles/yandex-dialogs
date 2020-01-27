@@ -23,7 +23,7 @@ var mongoConnection = common.GetEnv("COMMON_MONGO_CONNECTION", "")
 var databaseName = common.GetEnv("COMMON_DATABASE_NAME", "common")
 var statusCache = cache.New(5*time.Minute, 10*time.Minute)
 
-var shortPhrases = []string{"Число заразившихся на сегодняшний день достигло %d человек, умерли %d человек.", "На данный момент коронавирусом заразилось %d человек, умерли %d человек"}
+var shortPhrases = []string{"Число заразившихся на сегодняшний день достигло %d человек, умерли %d человек.", "На данный момент коронавирусом заразилось %d человек, умерли %d человек."}
 
 var acceptNews = []string{"да", "давай", "можно", "плюс", "ага", "угу", "дэ", "новости", "что в мире", "коронавирус"}
 var helpWords = []string{"помощь", "что ты може", "что ты умеешь"}
