@@ -25,7 +25,9 @@ var statusCache = cache.New(5*time.Minute, 10*time.Minute)
 
 var shortPhrases = []string{"Число заразившихся на сегодняшний день достигло %d человек, умерли %d человек.", "На данный момент коронавирусом заразилось %d человек, умерли %d человек."}
 
-var acceptNews = []string{"да", "давай", "можно", "плюс", "ага", "угу", "дэ", "новости", "что в мире"}
+var funWords = []string{"когда", "эпидемия", "консервы"}
+var yesWord = "да"
+var acceptNews = []string{"давай", "можно", "плюс", "ага", "угу", "дэ", "новости", "что там в мире", "что в мире", "Да, давай новости", "давай новости"}
 var helpWords = []string{"помощь", "что ты може", "что ты умеешь"}
 var cancelWords = []string{"отмена", "хватит", "все", "всё", "закончи", "закончить", "выход", "выйди", "выйти"}
 var runSkillWords = []string{"Хрен знает, выживший, на кой ляд тебе этот коронавирус сдался, но я в чужие дела не лезу.", "Здравствуй, выживший!", "Поздравляю, вы всё ещё живы! А тем временем", "Добро, выживший!", "Приветствую, выживший!"}
@@ -128,8 +130,19 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			return response
 		}
 
-		if containsIgnoreCase(request.Text(), acceptNews) {
+		if strings.EqualFold(request.Text(), yesWord) || containsIgnoreCase(request.Text(), acceptNews) {
 			response.Text(currentStatus.News)
+			response.Button("Выйти", "", true)
+			return response
+		}
+
+		if containsIgnoreCase(request.Text(), funWords) {
+			text := currentStatus.Status[rand.Intn(len(currentStatus.Status))]
+			text += " А вообще: "
+			text += currentStatus.Short
+
+			response.Text(text)
+			response.Button("Хроники коронавируса", "", true)
 			response.Button("Выйти", "", true)
 			return response
 		}
