@@ -56,7 +56,8 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 		text := request.Text()
 		if request.Session.New == true {
 			answer := helloSentences[rand.Intn(len(helloSentences))]
-			response.Text(fmt.Sprintf("Внимание, диалог может содержать взрослый и непристойный контент, если Вам нет восемнадцати лет, пожалуйста, закройте навык. - %s! Давай поболтаем?", answer))
+			response.Text(fmt.Sprintf("Внимание, диалог может содержать взрослый и непристойный контент, если Вам нет восемнадцати лет, пожалуйста, закройте навык, лучше запустите навык Хроники коронавируса!. - %s! Давай поболтаем?", answer))
+			response.Button("Хроники коронавируса", "https://dialogs.yandex.ru/store/skills/d5087c0d-hroniki-koronavirusa", false)
 			return response
 		} else if strings.EqualFold(text, "всё") || strings.EqualFold(text, "все") || containsIgnoreCase(text, exitWords) {
 			answer := bySentences[rand.Intn(len(bySentences))]
@@ -72,6 +73,7 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 		} else if strings.EqualFold(text, "помощь") || strings.EqualFold(text, "что ты умеешь") || strings.Contains(text, "ты умеешь") || strings.Contains(text, "ты можешь") {
 			response.Text("Меня зовут Маша. Я интерактивный бот собеседеник, обучаюсь на разговорах с людьми и каждый день должна становиться умнее. Но практика показывает, что я только деградирую... Просто спроси меня что нибудь, и давай поболтаем. Если устанешь от меня, просто скажи - всё или - хватит болтать. Кстати, мой номер в навыке Говорящая Почта - 8-8-0-0, готова общаться с Вами и там.")
 			response.Button("Подбодрить Машу", "https://dialogs.yandex.ru/store/skills/67b197f0-nedetskie-razgovory", false)
+			response.Button("Узнать про коронавирус", "https://dialogs.yandex.ru/store/skills/d5087c0d-hroniki-koronavirusa", false)
 			return response
 		}
 		answer, _ := v.GetAnswer(request.Session.UserID, text)
