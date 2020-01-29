@@ -23,7 +23,7 @@ var mongoConnection = common.GetEnv("COMMON_MONGO_CONNECTION", "")
 var databaseName = common.GetEnv("COMMON_DATABASE_NAME", "common")
 var statusCache = cache.New(5*time.Minute, 10*time.Minute)
 
-var shortPhrases = []string{"Число заразившихся на сегодняшний день достигло %d человек, умерли %d человек.", "На данный момент коронавирусом заразилось %d человек, умерли %d человек."}
+var shortPhrases = "Число заразившихся на сегодняшний день достигло %d %s, умерли %d %s."
 
 var funWords = []string{"когда", "эпидемия", "консервы"}
 var yesWord = "да"
@@ -204,7 +204,7 @@ func (c Coronavirus) GetDayStatus() *DayStatus {
 	}
 
 	if cases > 0 && death > 0 {
-		status.Short = fmt.Sprintf(shortPhrases[rand.Intn(len(shortPhrases))], cases, death)
+		status.Short = fmt.Sprintf(shortPhrases, cases, alice.Plural(cases, "человек", "человек", "человек"), death, alice.Plural(cases, "человек", "человека", "человек"))
 
 		if status.Cases != cases || status.Death != death {
 			status.Death = death
@@ -222,7 +222,7 @@ func (c Coronavirus) GetDayStatus() *DayStatus {
 
 func (c Coronavirus) buildErrorStatus(status *DayStatus) *DayStatus {
 	if status.Cases > 0 && status.Death > 0 {
-		status.Short = fmt.Sprintf(shortPhrases[rand.Intn(len(shortPhrases))], status.Cases, status.Death)
+		status.Short = fmt.Sprintf(shortPhrases, status.Cases, alice.Plural(status.Cases, "человек", "человек", "человек"), status.Death, alice.Plural(status.Death, "человек", "человека", "человек"))
 		return defaultAnswer
 	} else {
 		return defaultAnswer
