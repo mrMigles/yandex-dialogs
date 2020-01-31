@@ -168,10 +168,10 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			response.Text("Это твой личный гид в хроники коронавируса. Полезная хреновина, которая помогает подготовиться на случай возможной эпидемии. А если и так, то хоть будешь знать, когда консервы покупать, хе-хе-хе... " +
 				"\nПросто слушай сводку за день и следуй указаниям навыка." +
 				"\nМожешь спросить меня о симптомах коронависа или о том, как от него защититься.")
-			response.Button("Статус", "", false)
-			response.Button("Новости", "", false)
-			response.Button("Симптомы", "", false)
-			response.Button("Как защититься", "", false)
+			response.Button("Статус", "", true)
+			response.Button("Новости", "", true)
+			response.Button("Симптомы", "", true)
+			response.Button("Как защититься", "", true)
 			response.Button("Выйти", "", true)
 			return response
 		}
@@ -179,6 +179,8 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 		if strings.EqualFold(request.Text(), yesWord) || containsIgnoreCase(request.Text(), acceptNews) {
 			text += currentStatus.News
 			response.Text(text)
+			response.Button("Симптомы", "", true)
+			response.Button("Как защититься", "", true)
 			response.Button("Выйти", "", true)
 			return response
 		}
@@ -205,28 +207,28 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 		if containsIgnoreCase(request.Text(), symptomsWords) {
 			text += symptomsPhrases[rand.Intn(len(symptomsPhrases))]
 			response.Text(text)
-			response.Button("Новости", "", false)
-			response.Button("Как защититься", "", false)
-			response.Button("Выйти", "", false)
+			response.Button("Новости", "", true)
+			response.Button("Как защититься", "", true)
+			response.Button("Выйти", "", true)
 			return response
 		}
 
 		if containsIgnoreCase(request.Text(), protectWords) {
 			text += howToProtectPhrases[rand.Intn(len(howToProtectPhrases))]
 			response.Text(text)
-			response.Button("Новости", "", false)
-			response.Button("Симптомы", "", false)
-			response.Button("Выйти", "", false)
+			response.Button("Новости", "", true)
+			response.Button("Симптомы", "", true)
+			response.Button("Выйти", "", true)
 			return response
 		}
 
 		if containsIgnoreCase(request.Text(), masksWords) {
 			text += masksPhrases[rand.Intn(len(masksPhrases))]
 			response.Text(text)
-			response.Button("Новости", "", false)
-			response.Button("Симптомы", "", false)
-			response.Button("Как защититься", "", false)
-			response.Button("Выйти", "", false)
+			response.Button("Новости", "", true)
+			response.Button("Симптомы", "", true)
+			response.Button("Как защититься", "", true)
+			response.Button("Выйти", "", true)
 			return response
 		}
 
@@ -240,10 +242,10 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 		text += " \n"
 		text += newsPhrases[rand.Intn(len(newsPhrases))]
 		response.Text(text)
-		response.Button("Да, давай новости", "", false)
-		response.Button("Симптомы", "", false)
-		response.Button("Как защититься", "", false)
-		response.Button("Выйти", "", false)
+		response.Button("Да, давай новости", "", true)
+		response.Button("Симптомы", "", true)
+		response.Button("Как защититься", "", true)
+		response.Button("Выйти", "", true)
 		return response
 	}
 }
