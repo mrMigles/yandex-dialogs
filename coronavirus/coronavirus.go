@@ -30,9 +30,44 @@ var yesWord = "да"
 var acceptNews = []string{"давай", "можно", "плюс", "ага", "угу", "дэ", "новости", "что там в мире", "что в мире", "Да, давай новости", "давай новости"}
 var helpWords = []string{"помощь", "что ты може", "что ты умеешь"}
 var cancelWords = []string{"отмена", "хватит", "все", "всё", "закончи", "закончить", "выход", "выйди", "выйти"}
-var runSkillWords = []string{"Хрен знает, выживший, на кой ляд тебе этот коронавирус сдался, но я в чужие дела не лезу.", "Здравствуй, выживший!", "Поздравляю, вы всё ещё живы! А тем временем", "Добро, выживший!", "Приветствую, выживший!"}
-var endSkillWords = []string{"Удачи, выживший!", "Ну бывай, выживший!", "Не хворай, выживший!", "Не болей, выживший!"}
-var newsWords = []string{"Хочешь послушать полную сводку?", "Послушаешь подробно?", "Рассказать подробнее?"}
+var protectWords = []string{"защитить", "что делать", "не заболеть", "чеснок", "боротьс", "нужно", "как "}
+var symptomsWords = []string{"симптом", "чувств", "заболел", "плохо", "болею"}
+var masksWords = []string{"маск", "респератор", "защита"}
+
+var runSkillPhrases = []string{"Хрен знает, выживший, на кой ляд тебе этот коронавирус сдался, но я в чужие дела не лезу.", "Здравствуй, выживший!", "Здравствуй, выживший!", "Здравствуй, выживший!", "Поздравляю, вы всё ещё живы! А тем временем", "Добро, выживший!", "Приветствую, выживший!", "Приветствую, выживший!", "Приветствую, выживший!", "Приветствую, выживший!"}
+var endSkillPhrases = []string{"Удачи, выживший!", "Ну бывай, выживший!", "Не хворай, выживший!", "Не болей, выживший!"}
+var newsPhrases = []string{"Хочешь послушать полную сводку или услышать про симптомы?", "Послушаешь подробно новости или рассказать о симптомах?", "Рассказать новости или послушаешь как защититься от вируса?"}
+
+var howToProtectPhrases = []string{"Всемирная организация здравоохранения рекомендует следующие" +
+	" меры, которые защищают от многих вирусов:	" +
+	"\n - Правильно и регулярно мойте руки: не меньше 20 секунд, с мылом и тщательно промывая все участки, а затем вытирайте насухо. " +
+	"Если мыла под рукой нет, можно использовать антисептический гель." +
+	"\n - Не прикасайтесь грязными руками к лицу, особенно носу, рту и глазам." +
+	"\n - Не приближайтесь к людям, которые кашляют и чихают, а также к тем, у кого высокая температура." +
+	"\n - Готовьте мясо и яйца как положено, то есть при достаточной температуре.",
+
+	"Чтобы минимизировать риски заражения вирусом, медики рекомендуют:	" +
+		"\n - Правильно и регулярно мойте руки: не меньше 20 секунд, с мылом и тщательно промывая все участки, а затем вытирайте насухо. " +
+		"Если мыла под рукой нет, можно использовать антисептический гель." +
+		"\n - Не прикасайтесь грязными руками к лицу, особенно носу, рту и глазам." +
+		"\n - Не приближайтесь к людям, которые кашляют и чихают, а также к тем, у кого высокая температура." +
+		"\n - Готовьте мясо и яйца как положено, то есть при достаточной температуре."}
+
+var symptomsPhrases = []string{"Симптомы во многом сходны со многими респираторными заболеваниями, часто имитируют обычную простуду, могут походить на грипп. " +
+	"\n - Чувство усталости. " +
+	"\n - Затруднённое дыхание. " +
+	"\n - Высокая температура. " +
+	"\n - Кашель и / или боль в горле. " +
+	"\n Если у вас есть аналогичные симптомы, подумайте о следующем: " +
+	"\n - Вы посещали в последние две недели в зоны повышенного риска (Китай и прилегающие регионы)? " +
+	"\n - Вы были в контакте с кем-то, кто посещал в последние две недели в зоны повышенного риска (Китай и прилегающие регионы)? " +
+	"\n - Если ответ на эти вопросы положителен - к симптомам следует отнестись максимально внимательно. "}
+
+var masksPhrases = []string{"Теоретически вряд ли маски очень полезны. Недостатков у них очень много. Но если всё таки хочется их носить, соблюдайте следующие правила:" +
+	"\n - Аккуратно закройте нос и рот маской и закрепите её, чтобы уменьшить зазор между лицом и маской." +
+	"\n - Не прикасайтесь к маске во время использования. После прикосновения к использованной маске, например, чтобы снять её, вымойте руки." +
+	"\n - После того, как маска станет влажной или загрязнённой, наденьте новую чистую и сухую маску." +
+	"\n - Не используйте повторно одноразовые маски. Их следует выбрасывать после каждого использования и утилизировать сразу после снятия."}
 
 var defaultAnswer = &DayStatus{
 	Short:  "Выживший... Сервера пали... Связи больше нет.",
@@ -124,20 +159,30 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 
 		currentStatus := c.GetDayStatus()
 
+		text := ""
+
+		if request.IsNewSession() {
+			text += runSkillPhrases[rand.Intn(len(runSkillPhrases))]
+			text += " "
+		}
+
 		if containsIgnoreCase(request.Text(), helpWords) {
-			response.Text("Это твой личный гид в хроники коронавируса. Полезная хреновина, которая помогает подготовиться на случай возможной эпидемии. А если и так, то хоть будешь знать, когда консервы покупать, хе-хе-хе... Просто слушай сводку за день и следуй указаниям навыка.")
+			response.Text("Это твой личный гид в хроники коронавируса. Полезная хреновина, которая помогает подготовиться на случай возможной эпидемии. А если и так, то хоть будешь знать, когда консервы покупать, хе-хе-хе... " +
+				"\nПросто слушай сводку за день и следуй указаниям навыка." +
+				"\nМожешь спросить меня о симптомах коронависа или о том, как от него защититься.")
 			response.Button("Выйти", "", true)
 			return response
 		}
 
 		if strings.EqualFold(request.Text(), yesWord) || containsIgnoreCase(request.Text(), acceptNews) {
-			response.Text(currentStatus.News)
+			text += currentStatus.News
+			response.Text(text)
 			response.Button("Выйти", "", true)
 			return response
 		}
 
 		if containsIgnoreCase(request.Text(), funWords) {
-			text := currentStatus.Status[rand.Intn(len(currentStatus.Status))]
+			text += currentStatus.Status[rand.Intn(len(currentStatus.Status))]
 			text += " А вообще: "
 			text += currentStatus.Short
 
@@ -148,22 +193,44 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 		}
 
 		if containsIgnoreCase(request.Text(), cancelWords) {
-			text := endSkillWords[rand.Intn(len(endSkillWords))]
+			text := endSkillPhrases[rand.Intn(len(endSkillPhrases))]
 			response.Text(text + " Скажи - закончить, чтобы я отключился.")
 			response.Button("Оценить навык", "https://dialogs.yandex.ru/store/skills/d5087c0d-hroniki-koronavirusa", false)
 			response.Button("Закончить", "", false)
 			return response
 		}
 
-		text := runSkillWords[rand.Intn(len(runSkillWords))]
+		if containsIgnoreCase(request.Text(), symptomsWords) {
+			text += symptomsPhrases[rand.Intn(len(symptomsPhrases))]
+			response.Text(text)
+			return response
+		}
+
+		if containsIgnoreCase(request.Text(), protectWords) {
+			text += howToProtectPhrases[rand.Intn(len(howToProtectPhrases))]
+			response.Text(text)
+			return response
+		}
+
+		if containsIgnoreCase(request.Text(), masksWords) {
+			text += masksPhrases[rand.Intn(len(masksPhrases))]
+			response.Text(text)
+			return response
+		}
+
+		if text == "" {
+			text += runSkillPhrases[rand.Intn(len(runSkillPhrases))]
+		}
 		text += " "
 		text += currentStatus.Short
-		text += " "
+		text += " \n"
 		text += currentStatus.Status[rand.Intn(len(currentStatus.Status))]
-		text += " "
-		text += newsWords[rand.Intn(len(newsWords))]
+		text += " \n"
+		text += newsPhrases[rand.Intn(len(newsPhrases))]
 		response.Text(text)
 		response.Button("Да, давай новости", "", false)
+		response.Button("Симптомы", "", false)
+		response.Button("Как защититься", "", false)
 		response.Button("Выйти", "", false)
 		return response
 	}
