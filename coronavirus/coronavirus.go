@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/azzzak/alice"
 	"github.com/go-bongo/bongo"
-	"github.com/patrickmn/go-cache"
 	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"log"
@@ -21,7 +20,6 @@ import (
 
 var mongoConnection = common.GetEnv("COMMON_MONGO_CONNECTION", "")
 var databaseName = common.GetEnv("COMMON_DATABASE_NAME", "common")
-var statusCache = cache.New(5*time.Minute, 10*time.Minute)
 
 var shortPhrases = "Число заразившихся на сегодняшний день достигло %d %s, умерли %d %s."
 
@@ -61,7 +59,7 @@ var symptomsPhrases = []string{"Симптомы во многом сходны 
 	"\n Если у вас есть аналогичные симптомы, подумайте о следующем: " +
 	"\n - Вы посещали в последние две недели в зоны повышенного риска (Китай и прилегающие регионы)? " +
 	"\n - Вы были в контакте с кем-то, кто посещал в последние две недели в зоны повышенного риска (Китай и прилегающие регионы)? " +
-	"\n - Если ответ на эти вопросы положителен - к симптомам следует отнестись максимально внимательно. "}
+	"\nЕсли ответ на эти вопросы положителен - к симптомам следует отнестись максимально внимательно. "}
 
 var masksPhrases = []string{"Теоретически вряд ли маски очень полезны. Недостатков у них очень много. Но если всё таки хочется их носить, соблюдайте следующие правила:" +
 	"\n - Аккуратно закройте нос и рот маской и закрепите её, чтобы уменьшить зазор между лицом и маской." +
@@ -170,6 +168,10 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			response.Text("Это твой личный гид в хроники коронавируса. Полезная хреновина, которая помогает подготовиться на случай возможной эпидемии. А если и так, то хоть будешь знать, когда консервы покупать, хе-хе-хе... " +
 				"\nПросто слушай сводку за день и следуй указаниям навыка." +
 				"\nМожешь спросить меня о симптомах коронависа или о том, как от него защититься.")
+			response.Button("Статус", "", false)
+			response.Button("Новости", "", false)
+			response.Button("Симптомы", "", false)
+			response.Button("Как защититься", "", false)
 			response.Button("Выйти", "", true)
 			return response
 		}
@@ -203,18 +205,28 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 		if containsIgnoreCase(request.Text(), symptomsWords) {
 			text += symptomsPhrases[rand.Intn(len(symptomsPhrases))]
 			response.Text(text)
+			response.Button("Новости", "", false)
+			response.Button("Как защититься", "", false)
+			response.Button("Выйти", "", false)
 			return response
 		}
 
 		if containsIgnoreCase(request.Text(), protectWords) {
 			text += howToProtectPhrases[rand.Intn(len(howToProtectPhrases))]
 			response.Text(text)
+			response.Button("Новости", "", false)
+			response.Button("Симптомы", "", false)
+			response.Button("Выйти", "", false)
 			return response
 		}
 
 		if containsIgnoreCase(request.Text(), masksWords) {
 			text += masksPhrases[rand.Intn(len(masksPhrases))]
 			response.Text(text)
+			response.Button("Новости", "", false)
+			response.Button("Симптомы", "", false)
+			response.Button("Как защититься", "", false)
+			response.Button("Выйти", "", false)
 			return response
 		}
 
