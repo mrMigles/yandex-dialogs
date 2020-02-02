@@ -11,6 +11,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,8 +21,9 @@ import (
 
 var mongoConnection = common.GetEnv("COMMON_MONGO_CONNECTION", "")
 var databaseName = common.GetEnv("COMMON_DATABASE_NAME", "common")
+var coronavirusApi = common.GetEnv("CORONAVIRUS_API", "")
 
-var shortPhrases = "Число заразившихся на сегодняшний день достигло %d %s, умерли %d %s."
+var shortPhrases = "Число заразившихся на сегодняшний день достигло %d %s, %d %s умерли от болезни."
 
 var funWords = []string{"когда", "эпидемия", "консервы"}
 var yesWord = "да"
@@ -84,8 +86,8 @@ type DayStatus struct {
 
 type CountryInfo struct {
 	Region string `json:"region"`
-	Cases  string `json:"cases"`
-	Death  string `json:"death"`
+	Cases  int    `json:"cases,string"`
+	Death  int    `json:"death,string"`
 }
 
 type Coronavirus struct {
@@ -258,7 +260,7 @@ func (c Coronavirus) GetDayStatus() *DayStatus {
 	}
 
 	var countryInfos []CountryInfo
-	resp, err := c.httpClient.Get("https://coronavirus.zone/data.json")
+	resp, err := c.httpClient.Get(coronavirusApi)
 	if err != nil {
 		return c.buildErrorStatus(status)
 	}
@@ -269,6 +271,11 @@ func (c Coronavirus) GetDayStatus() *DayStatus {
 		return c.buildErrorStatus(status)
 	}
 
+	bodyString := string(bodyBytes)
+	var re = regexp.MustCompile(`(:)(\d)`)
+	bodyString = re.ReplaceAllString(bodyString, `$1"$2"`)
+	bodyBytes = []byte(bodyString)
+
 	err = json.Unmarshal(bodyBytes, &countryInfos)
 	if err != nil {
 		return c.buildErrorStatus(status)
@@ -277,15 +284,12 @@ func (c Coronavirus) GetDayStatus() *DayStatus {
 	cases := 0
 	death := 0
 	for _, info := range countryInfos {
-		caseVar, _ := strconv.Atoi(info.Cases)
-		cases += caseVar
-
-		deathVar, _ := strconv.Atoi(info.Death)
-		death += deathVar
+		cases += info.Cases
+		death += info.Death
 	}
 
 	if cases > 0 && death > 0 {
-		status.Short = fmt.Sprintf(shortPhrases, cases, alice.Plural(cases, "человек", "человек", "человек"), death, alice.Plural(cases, "человек", "человека", "человек"))
+		status.Short = fmt.Sprintf(shortPhrases, cases, Plural(cases, "человек", "человек", "человек"), death, Plural(death, "человек", "человека", "человек"))
 
 		if status.Cases != cases || status.Death != death {
 			status.Death = death
@@ -303,7 +307,7 @@ func (c Coronavirus) GetDayStatus() *DayStatus {
 
 func (c Coronavirus) buildErrorStatus(status *DayStatus) *DayStatus {
 	if status.Cases > 0 && status.Death > 0 {
-		status.Short = fmt.Sprintf(shortPhrases, status.Cases, alice.Plural(status.Cases, "человек", "человек", "человек"), status.Death, alice.Plural(status.Death, "человек", "человека", "человек"))
+		status.Short = fmt.Sprintf(shortPhrases, status.Cases, Plural(status.Cases, "человек", "человек", "человек"), status.Death, Plural(status.Death, "человек", "человека", "человек"))
 		return status
 	} else {
 		return defaultAnswer
@@ -317,4 +321,19 @@ func containsIgnoreCase(message string, wordsToCheck []string) bool {
 		}
 	}
 	return false
+}
+
+// Plural помогает согласовать слово с числительным.
+func Plural(n int, singular, plural1, plural2 string) string {
+	slice := strconv.Itoa(n)
+	last := slice[len(slice)-1:]
+
+	switch last {
+	case "1":
+		return singular
+	case "2", "3", "4":
+		return plural1
+	default:
+		return plural2
+	}
 }
