@@ -290,7 +290,7 @@ func (c Coronavirus) GetDayStatus() *DayStatus {
 func (c Coronavirus) buildErrorStatus(status *DayStatus) *DayStatus {
 	if status.Cases > 0 && status.Death > 0 {
 		status.Short = fmt.Sprintf(shortPhrases, status.Cases, alice.Plural(status.Cases, "человек", "человек", "человек"), status.Death, alice.Plural(status.Death, "человек", "человека", "человек"))
-		return defaultAnswer
+		return status
 	} else {
 		return defaultAnswer
 	}
