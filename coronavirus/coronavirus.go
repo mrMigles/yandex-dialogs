@@ -284,6 +284,9 @@ func (c Coronavirus) GetDayStatus() *DayStatus {
 	cases := 0
 	death := 0
 	for _, info := range countryInfos {
+		if containsIgnoreCase(info.Region, []string{"province", "regions"}) {
+			continue
+		}
 		cases += info.Cases
 		death += info.Death
 	}
