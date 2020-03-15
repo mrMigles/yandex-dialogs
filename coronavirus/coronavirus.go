@@ -288,6 +288,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			text += buildNews(currentStatus.Current.AllNews)
 			response.Text(text)
 			response.Button("Вчерашние новости", "", true)
+			response.Button("Статистика", "", true)
 			response.Button("Симптомы", "", true)
 			response.Button("Как защититься", "", true)
 			response.Button("Выйти", "", true)
@@ -298,6 +299,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			text += "В мире объявлена пандемия коронавируса, полки магазинов пустеют, людям рекомендуют работать из дома..."
 			response.Text(text)
 			response.Button("Хроники коронавируса", "", true)
+			response.Button("Статистика", "", true)
 			response.Button("Выйти", "", true)
 			return response
 		}
@@ -385,6 +387,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 				response.Text(text)
 			}
 			response.Button("Новости", "", true)
+			response.Button("Статистика", "", true)
 			response.Button("Симптомы", "", true)
 			response.Button("Как защититься", "", true)
 			response.Button("Выйти", "", true)
@@ -541,14 +544,14 @@ func (c Coronavirus) grabData() *DayStatus {
 	currentStatus := c.GetDayStatus()
 	resp, err := c.httpClient.Get(coronavirusApi)
 	if err != nil {
-		log.Print("Error: ")
+		log.Print("Error: when getting coronavirus response")
 		return currentStatus
 	}
 	defer resp.Body.Close()
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Print("Error: ")
+		log.Print("Error: when reading coronavirus response")
 		return currentStatus
 	}
 
@@ -559,7 +562,7 @@ func (c Coronavirus) grabData() *DayStatus {
 	var result Response
 	err = json.Unmarshal(bodyBytes, &result)
 	if err != nil {
-		log.Print("Error: ")
+		log.Print("Error: when unmarhsal coronavirus response")
 		return currentStatus
 	}
 
@@ -603,6 +606,6 @@ func (c Coronavirus) grabData() *DayStatus {
 	if err != nil {
 		log.Print("Error when saving to DB")
 	}
-	log.Print("New info isa saved")
+	log.Print("New info saved")
 	return currentStatus
 }

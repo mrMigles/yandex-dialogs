@@ -149,12 +149,12 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 			}
 
 			helloMessage := &Message{From: 1000, To: number, Text: "Добро пожаловать в ряды пользователей Говорящей почты! " +
-				"Это первое, приветсвенное 'Hello World' сообщение от создателя навыка. " +
-				"Вы можете использовать номер 1-0-0-0 для отправки ваших отзывов и предложений по навыку. " +
-				"Иногда с этого номера будет приходить важная информация об изменениях в работе навыка. " +
-				"Ответьте на данное сообщение, если у вас есть идеи, как можно сделать Говорящую почту лучше. " +
-				"Спасибо, что пользуетесь навыком! " +
-				"Конец связи."}
+				"\nЭто первое, приветсвенное 'Hello World' сообщение от создателя навыка. " +
+				"\nВы можете использовать номер 1-0-0-0 для отправки ваших отзывов и предложений по навыку. " +
+				"\nИногда с этого номера будет приходить важная информация об изменениях в работе навыка. " +
+				"\nОтветьте на данное сообщение, если у вас есть идеи, как можно сделать Говорящую почту лучше. " +
+				"\nСпасибо, что пользуетесь навыком! " +
+				"\nКонец связи."}
 			err = v.mailService.SendMessage(helloMessage)
 			if err != nil {
 				response.Text("Произошла ошибка, попробуйте ещё раз")
@@ -162,12 +162,12 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 			}
 
 			response.Text(fmt.Sprintf("Добро пожаловать в говорящую почту! Ваш почтовый номер: %s."+
-				" Поделитесь этим номером с друзьями, и они смогут присылать вам сообщения."+
-				" Сейчас вы можете отправить новое сообщение или проверить почту, просто скажите об этом."+
-				" Вы, также, можете завести новые знакомства, отправив сообщение на номер 70-70."+
-				" И оно достанется случайному пользователю, кто отправил аналогичное сообщение."+
-				" Если появятся вопросы, скажите - помощь, или задайте вопрос."+
-				" С чего начнём?", v.printNumber(currentUser.Number)))
+				"\n Поделитесь этим номером с друзьями, и они смогут присылать вам сообщения."+
+				"\n Сейчас вы можете отправить новое сообщение или проверить почту, просто скажите об этом."+
+				"\n Вы, также, можете завести новые знакомства, отправив сообщение на номер 70-70."+
+				"\n И оно достанется случайному пользователю, кто отправил аналогичное сообщение."+
+				"\n Если появятся вопросы, скажите - помощь, или задайте вопрос."+
+				"\n С чего начнём?", v.printNumber(currentUser.Number)))
 			response.Button("Отправить", "", true)
 			response.Button("Проверить почту", "", true)
 			response.Button("Помощь", "", true)
@@ -183,7 +183,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 			count := v.getCountOfMessages(currentUser)
 
 			if count > 0 {
-				text += fmt.Sprintf("У вас %s %s. Хотите прослушать?", v.printCount(count), alice.Plural(count, "новое сообщение", "новых сообщения", "новых сообщений"))
+				text += fmt.Sprintf("У вас %s %s. \nХотите прослушать?", v.printCount(count), alice.Plural(count, "новое сообщение", "новых сообщения", "новых сообщений"))
 				v.states[currentUser.Id].state = "ask_start_listen_mail"
 				response.Button("Да", "", true)
 				response.Button("Нет", "", true)
@@ -207,7 +207,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				if containsIgnoreCase(request.Text(), checkMailWords) {
 					count := v.getCountOfMessages(currentUser)
 					if count > 0 {
-						response.Text(fmt.Sprintf("У вас %s %s. Хотите прослушать?", v.printCount(count), alice.Plural(count, "новое сообщение", "новых сообщения", "новых сообщений")))
+						response.Text(fmt.Sprintf("У вас %s %s. \nХотите прослушать?", v.printCount(count), alice.Plural(count, "новое сообщение", "новых сообщения", "новых сообщений")))
 						currentState.state = "ask_start_listen_mail"
 						response.Button("Да", "", true)
 						response.Button("Нет", "", true)
@@ -261,9 +261,9 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				// for help phrase
 				if containsIgnoreCase(request.Text(), helpWords) {
 					response.Text("Для того, чтобы отправить сообщение, скажите - отправить. " +
-						"Чтобы проверить почту, скажите - проверить почту. " +
-						"Чтобы узнать свой номер, скажите - мой номер. " +
-						"Чтобы отменить текущую операцию, скажите - отмена. Скажите - закончить, чтобы выйти из навыка.")
+						"\nЧтобы проверить почту, скажите - проверить почту. " +
+						"\nЧтобы узнать свой номер, скажите - мой номер. " +
+						"\nЧтобы отменить текущую операцию, скажите - отмена. Скажите - закончить, чтобы выйти из навыка.")
 					response.Button("Отправить", "", true)
 					response.Button("Проверить почту", "", true)
 					response.Button("Мой номер", "", true)
@@ -303,7 +303,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						currentState.state = "root"
 						return response
 					}
-					text := fmt.Sprintf("Сообщение от номера: %s. %s. - . Слушать дальше или ответить?", v.printNumber(message.From), message.Text)
+					text := fmt.Sprintf("Сообщение от номера: %s. \n%s. \n- \nСлушать дальше или ответить?", v.printNumber(message.From), message.Text)
 					response.Text(text)
 					currentState.context = message
 					currentState.state = "ask_continue_listen_mail"
@@ -339,7 +339,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						currentState.context = nil
 						return response
 					}
-					text := fmt.Sprintf("Сообщение от номера: %s. %s. - . Слушать дальше или ответить?", v.printNumber(message.From), message.Text)
+					text := fmt.Sprintf("Сообщение от номера: %s. \n%s. \n- \nСлушать дальше или ответить?", v.printNumber(message.From), message.Text)
 					response.Text(text)
 					currentState.state = "ask_continue_listen_mail"
 					currentState.context = message
@@ -355,7 +355,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						currentState.state = "root"
 						return response
 					}
-					text := fmt.Sprintf("Сообщение от номера: %s. %s. - . Слушать дальше или ответить?", v.printNumber(currentState.context.From), currentState.context.Text)
+					text := fmt.Sprintf("Сообщение от номера: %s. \n%s. \n- \nСлушать дальше или ответить?", v.printNumber(currentState.context.From), currentState.context.Text)
 					response.Text(text)
 					response.Button("Дальше", "", true)
 					response.Button("Ответить", "", true)
@@ -397,14 +397,14 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					}
 					currentUser.BlackList = append(currentUser.BlackList, currentState.context.From)
 					v.mailService.SaveUser(currentUser)
-					text := fmt.Sprintf("Номер %s был добавлен в черный список. Для того, чтобы очистить список, просто скажите - очистить черный список. "+
+					text := fmt.Sprintf("Номер %s был добавлен в черный список. \nДля того, чтобы очистить список, просто скажите - очистить черный список. "+
 						"Хотите продолжить прослушивание сообщений?", v.printNumber(currentState.context.From))
 					response.Text(text)
 					currentState.state = "ask_after_black_list"
 					return response
 				}
 
-				response.Text("Вы можете ответить на это сообщение, сказав - ответить, или продолжить слушать сообщения, просто ответив - дальше. Также, вы можете забанить отправителя сообщения и добавить его в черный список, просто сказав - забанить")
+				response.Text("Вы можете ответить на это сообщение, сказав - ответить, или продолжить слушать сообщения, просто ответив - дальше. \nТакже, вы можете забанить отправителя сообщения и добавить его в черный список, просто сказав - забанить")
 				response.Button("Дальше", "", true)
 				response.Button("Ответить", "", true)
 				return response
@@ -418,7 +418,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						currentState.state = "root"
 						return response
 					}
-					text := fmt.Sprintf("Сообщение от номера %s. %s. - Слушать дальше или ответить?", v.printNumber(message.From), message.Text)
+					text := fmt.Sprintf("Сообщение от номера %s. \n%s. \n- \nСлушать дальше или ответить?", v.printNumber(message.From), message.Text)
 					response.Text(text)
 					currentState.state = "ask_continue_listen_mail"
 					currentState.context = message
@@ -468,8 +468,8 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 							to = number
 						} else {
 							response.Text("Вам нужно назвать четырёхзначный номер получателя или имя из записной книжки. " +
-								"Вы также можете отправить сообщение случайному пользователю на номер 70-70, или оставить отзыв по номеру 1-0-0-0, просто скажите об этом. " +
-								"Скажите - отмена, чтобы вернуться.")
+								"\nВы также можете отправить сообщение случайному пользователю на номер 70-70, или оставить отзыв по номеру 1-0-0-0, просто скажите об этом. " +
+								"\nСкажите - отмена, чтобы вернуться.")
 							response.Button("Отмена", "", true)
 							return response
 						}
@@ -514,7 +514,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 
 				currentState.context.Text = request.Text()
 				currentState.state = "ask_send_confirm"
-				response.Text(fmt.Sprintf("Отправляю сообщение - %s - на номер - %s. Всё верно?", currentState.context.Text, v.printNumber(currentState.context.To)))
+				response.Text(fmt.Sprintf("Отправляю сообщение: \n- \n%s \n- \nНа номер: %s. \nВсё верно?", currentState.context.Text, v.printNumber(currentState.context.To)))
 				response.Button("Да", "", true)
 				response.Button("Нет", "", true)
 				return response
@@ -574,7 +574,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					return response
 				}
 
-				response.Text("Чтобы подтвердить отправку сообщения, скажите - да. Либо скажите - отмена, чтобы вернуться в главое меню")
+				response.Text("Чтобы подтвердить отправку сообщения, скажите - да. \nЛибо скажите - отмена, чтобы вернуться в главое меню")
 				response.Button("Да", "", true)
 				response.Button("Отмена", "", true)
 				return response
@@ -614,7 +614,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						response.Button("Выйти", "", true)
 						return response
 					}
-					response.Text(fmt.Sprintf("Для номера: %s, установлено имя: %s, вы можете использовать его для отправки сообщений. Хотите что то ещё?", v.printNumber(currentState.context.To), request.Text()))
+					response.Text(fmt.Sprintf("Для номера: %s, установлено имя: %s, вы можете использовать его для отправки сообщений. \nХотите что то ещё?", v.printNumber(currentState.context.To), request.Text()))
 					response.Button("Отправить новое", "", true)
 					response.Button("Проверить почту", "", true)
 					response.Button("Выйти", "", true)
