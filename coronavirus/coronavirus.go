@@ -344,11 +344,12 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 		}
 
 		if containsIgnoreCase(request.Text(), statsWords) {
-			text += "Назовите страну или регион, для которого озвучить статистику по заражениям"
+			text += "Назовите или выберите страну или город, для которого хотите услышать статистику по заражениям"
 			response.Text(text)
 			response.Button("Россия", "", true)
 			response.Button("Украина", "", true)
 			response.Button("Беларусь", "", true)
+			response.Button("Москва", "", true)
 			response.Button("Выйти", "", true)
 			return response
 		}
