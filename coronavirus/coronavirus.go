@@ -24,7 +24,7 @@ var databaseName = common.GetEnv("COMMON_DATABASE_NAME", "common")
 var coronavirusApi = common.GetEnv("CORONAVIRUS_API", "")
 
 var fullFirstPhrase = "На сегодняшний день в мире зафиксировано %d %s заражения коронавирусной инфекцией%s. \n%d %s умерли от болезни%s. \nВыздоровевших - %d %s. \nОсновные очаги заражения: %s. \nВ России количество заразившихся достигло %d %s%s."
-var epicentr = "Вот 20 стран, с наибольшим количеством зарасившихся: %s"
+var epicentr = "Вот 20 стран, с наибольшим количеством заразившихся: %s\n"
 var moreThanYesterday = ", это на %d больше, чем вчера"
 var moreThenDay = ", за сутки это число увеличилось на %d"
 var moreThanLastDay = ", их количество выросло на %d за последний день"
