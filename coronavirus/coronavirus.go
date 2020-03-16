@@ -24,7 +24,7 @@ var databaseName = common.GetEnv("COMMON_DATABASE_NAME", "common")
 var coronavirusApi = common.GetEnv("CORONAVIRUS_API", "")
 
 var fullFirstPhrase = "На сегодняшний день в мире зафиксировано %d %s заражения коронавирусной инфекцией%s. \n%d %s умерли от болезни%s. \nВыздоровевших - %d %s. \nОсновные очаги заражения: %s. \nВ России количество заразившихся достигло %d %s%s."
-
+var epicentr = "Вот 20 стран, с наибольшим количеством зарасившихся: %s"
 var moreThanYesterday = ", это на %d больше, чем вчера"
 var moreThenDay = ", за сутки это число увеличилось на %d"
 var moreThanLastDay = ", их количество выросло на %d за последний день"
@@ -36,6 +36,7 @@ var funWords = []string{"когда", "эпидемия", "консерв"}
 var statsWords = []string{"статистик", "стран", "город", "област"}
 var yesWord = "да"
 var yesterdayNews = []string{"вчера", "прошлы"}
+var epicentrWords = []string{"очаг", "самый", "самое", "заразивших", "заражен"}
 var acceptNews = []string{"давай", "можно", "плюс", "ага", "угу", "дэ", "новости", "что там в мире", "что в мире", "Да, давай новости", "давай новости"}
 var helpWords = []string{"помощь", "что ты може", "что ты умеешь"}
 var cancelWords = []string{"отмена", "хватит", "все", "всё", "закончи", "закончить", "выход", "выйди", "выйти"}
@@ -48,7 +49,7 @@ var runSkill = []string{"коронавирус", "хроник"}
 var runSkillPhrases = []string{"Здравствуйте!", "Приветствую!"}
 var endSkillPhrases = []string{"Удачи Вам, выживший! Постарайтесь сократить возможные контакты с зараженными и чаще мойте руки.", "Не хворайте, выживший! Постарайтесь сократить возможные контакты с зараженными и чаще мойте руки.", "Не болейте, выживший! Постарайтесь сократить возможные контакты с зараженными и чаще мойте руки."}
 var newsPhrases = []string{"Хотите прослушать новости, посмотреть статистику заражений или услышать про симптомы?", "Послушаете новости, статистику заражений или рассказать о симптомах?", "Рассказать новости, статистику заражений или послушаете как защититься от вируса?"}
-var firstHi = "Вы можете узнать статистику заболевания в определенной стране, регионе или городе, прослушать актуальные новости, а также узнать информацию по симптомам болезни и методам защиты от вируса."
+var firstHi = "Вы можете узнать статистику заболевания в определенной стране, регионе или городе, либо услышать статистику по очагам заболевания, прослушать актуальные новости, а также узнать информацию по симптомам болезни и методам защиты от вируса."
 
 var howToProtectPhrases = []string{"Всемирная организация здравоохранения рекомендует следующие" +
 	" меры, которые защищают от многих вирусов:	" +
@@ -261,11 +262,12 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 
 		if containsIgnoreCase(request.Text(), helpWords) {
 			response.Text("Это твой личный гид в хроники коронавируса. Полезный навык, который помогает подготовиться на случай возможной эпидемии и быть всегда в курсе текущей ситуации. " +
-				"\nВы можете спросить навык о статистике заболевания по регионам, а также прослушать важные новости." +
+				"\nВы можете спросить навык о статистике заболевания по регионам, узнать про очаги заражения, а также прослушать важные новости." +
 				"\nМожешь спросить о симптомах коронавируса или о том, как от него защититься." +
 				"\nВы можете оставить отзыв или предложение в каталоге навыков, либо написав мне в навыке \"Говорящая Почта\" на номер 1-3-2-6.")
-			response.Button("Статус", "", true)
 			response.Button("Новости", "", true)
+			response.Button("Статистика", "", true)
+			response.Button("Очаги заражения", "", true)
 			response.Button("Симптомы", "", true)
 			response.Button("Как защититься", "", true)
 			response.Button("Оценить навык", "https://dialogs.yandex.ru/store/skills/d5087c0d-hroniki-koronavirusa", false)
@@ -284,11 +286,22 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			return response
 		}
 
+		if containsIgnoreCase(request.Text(), epicentrWords) {
+			text += fmt.Sprintf(epicentr, c.printFire(currentStatus))
+			response.Text(text)
+			response.Button("Актуальные новости", "", true)
+			response.Button("Симптомы", "", true)
+			response.Button("Как защититься", "", true)
+			response.Button("Выйти", "", true)
+			return response
+		}
+
 		if strings.EqualFold(request.Text(), yesWord) || containsIgnoreCase(request.Text(), acceptNews) {
 			text += buildNews(currentStatus.Current.AllNews)
 			response.Text(text)
 			response.Button("Вчерашние новости", "", true)
 			response.Button("Статистика", "", true)
+			response.Button("Очаги заражения", "", true)
 			response.Button("Симптомы", "", true)
 			response.Button("Как защититься", "", true)
 			response.Button("Выйти", "", true)
@@ -299,6 +312,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			text += "В мире объявлена пандемия коронавируса, полки магазинов пустеют, людям рекомендуют работать из дома..."
 			response.Text(text)
 			response.Button("Хроники коронавируса", "", true)
+			response.Button("Очаги заражения", "", true)
 			response.Button("Статистика", "", true)
 			response.Button("Выйти", "", true)
 			return response
@@ -317,6 +331,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			response.Text(text)
 			response.Button("Новости", "", true)
 			response.Button("Статистика", "", true)
+			response.Button("Очаги заражения", "", true)
 			response.Button("Как защититься", "", true)
 			response.Button("Выйти", "", true)
 			return response
@@ -389,6 +404,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			}
 			response.Button("Новости", "", true)
 			response.Button("Статистика", "", true)
+			response.Button("Очаги заражения", "", true)
 			response.Button("Симптомы", "", true)
 			response.Button("Как защититься", "", true)
 			response.Button("Выйти", "", true)
@@ -418,7 +434,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			currentStatus.Current.Confirmed, Plural(currentStatus.Current.Confirmed, "случай", "случая", "случаев"), confirmedTemplate,
 			currentStatus.Current.Deaths, Plural(currentStatus.Current.Deaths, "человек", "человека", "человек"), deathTemplate,
 			currentStatus.Current.Cured, Plural(currentStatus.Current.Cured, "человек", "человека", "человек"),
-			c.printFire(currentStatus),
+			c.printFireNames(currentStatus),
 			curRusReg.Confirmed, Plural(curRusReg.Confirmed, "человек", "человека", "человек"), rusConfirmedTemplate,
 		)
 		text += "\n"
@@ -430,6 +446,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 		response.Text(text)
 		response.Button("Новости", "", true)
 		response.Button("Статистика", "", true)
+		response.Button("Очаги заражения", "", true)
 		response.Button("Симптомы", "", true)
 		response.Button("Как защититься", "", true)
 		response.Button("Выйти", "", true)
@@ -508,9 +525,18 @@ func (c Coronavirus) saveUser(user *User) {
 	}
 }
 
-func (c Coronavirus) printFire(dayStatus *DayStatus) string {
+func (c Coronavirus) printFireNames(dayStatus *DayStatus) string {
 	strFire := make([]string, 0)
 	for i := 0; i < 5; i++ {
+		curInf := dayStatus.Current.Countries[i]
+		strFire = append(strFire, curInf.Ru)
+	}
+	return strings.Join(strFire, ", ")
+}
+
+func (c Coronavirus) printFire(dayStatus *DayStatus) string {
+	strFire := make([]string, 0)
+	for i := 0; i < 20; i++ {
 		curInf := dayStatus.Current.Countries[i]
 		yesInf := findRegion(dayStatus.Yesterday.Countries, dayStatus.Yesterday.Cities, curInf.Ru)
 		if yesInf == nil {
@@ -518,11 +544,11 @@ func (c Coronavirus) printFire(dayStatus *DayStatus) string {
 		}
 		str := fmt.Sprintf("%s - %d %s", curInf.Ru, curInf.Confirmed, Plural(curInf.Confirmed, "человек", "человека", "человек"))
 		if curInf.Confirmed-yesInf.Confirmed > 0 {
-			str += fmt.Sprintf(" (+%d)", curInf.Confirmed-yesInf.Confirmed)
+			str += fmt.Sprintf(" (+%d за день)", curInf.Confirmed-yesInf.Confirmed)
 		}
 		strFire = append(strFire, str)
 	}
-	return strings.Join(strFire, ", ")
+	return strings.Join(strFire, "\n")
 }
 
 func (c Coronavirus) printFireCities(dayStatus *DayStatus) string {
@@ -534,7 +560,7 @@ func (c Coronavirus) printFireCities(dayStatus *DayStatus) string {
 		}
 		str := fmt.Sprintf("%s - %d %s", city.Ru, city.Confirmed, Plural(city.Confirmed, "человек", "человека", "человек"))
 		if city.Confirmed-yesInf.Confirmed > 0 {
-			str += fmt.Sprintf(" (+%d)", city.Confirmed-yesInf.Confirmed)
+			str += fmt.Sprintf(" (+%d за день)", city.Confirmed-yesInf.Confirmed)
 		}
 		strFire = append(strFire, str)
 	}
