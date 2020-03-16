@@ -22,6 +22,7 @@ import (
 var mongoConnection = common.GetEnv("COMMON_MONGO_CONNECTION", "")
 var databaseName = common.GetEnv("COMMON_DATABASE_NAME", "common")
 var coronavirusApi = common.GetEnv("CORONAVIRUS_API", "")
+var coronavirusAddApi = common.GetEnv("CORONAVIRUS_ADDITIONAL_API", "")
 
 var fullFirstPhrase = "На сегодняшний день в мире зафиксировано %d %s заражения коронавирусной инфекцией%s. \n%d %s умерли от болезни%s. \nВыздоровело - %d %s. \nОсновные очаги заражения: %s. \nВ России количество заразившихся достигло %d %s%s."
 var epicentr = "Вот 20 стран, с наибольшим количеством заразившихся: \n%s"
@@ -103,6 +104,12 @@ type Response struct {
 	Countries     CountriesContainer     `json:"countries"`
 	AllNews       AllNewsContainer       `json:"allNews"`
 	ImportantNews ImportantNewsContainer `json:"importantNews"`
+}
+
+type AddResponse struct {
+	Cases     int `json:"cases"`
+	Deaths    int `json:"deaths"`
+	Recovered int `json:"recovered"`
 }
 
 type CitiesContainer struct {
@@ -395,7 +402,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 					text += fmt.Sprintf(countryInfoWithoutY, curRegInfo.Ru, curRegInfo.Confirmed, Plural(curRegInfo.Confirmed, "случай", "случая", "случаев"), curRegInfo.Deaths, Plural(curRegInfo.Deaths, "человек", "человека", "человек"), curRegInfo.Cured, Plural(curRegInfo.Cured, "человек", "человека", "человек"))
 				}
 				if curRegInfo.Ru == "Россия" {
-					text += "\nСтатистика заражений по городам России: \n" + c.printFireCities(currentStatus)
+					text += "\nСтатистика заражений по рагионам России: \n" + c.printFireCities(currentStatus)
 				}
 				response.Text(text)
 			} else {
@@ -620,6 +627,8 @@ func (c Coronavirus) grabData() *DayStatus {
 		AllNews:       allNews,
 	}
 
+	currentInfo = c.enrichCoronaInfo(currentInfo)
+
 	if currentStatus == nil {
 		currentStatus = &DayStatus{Current: currentInfo, Yesterday: currentInfo}
 	} else {
@@ -635,4 +644,72 @@ func (c Coronavirus) grabData() *DayStatus {
 	}
 	log.Print("New info saved")
 	return currentStatus
+}
+
+func (c Coronavirus) enrichCoronaInfo(info CoronavirusInfo) CoronavirusInfo {
+	addResp, err := c.httpClient.Get(coronavirusAddApi + "/all")
+	if err != nil {
+		log.Print("Error: when getting additional coronavirus response")
+		return info
+	}
+	defer addResp.Body.Close()
+
+	bodyBytes, err := ioutil.ReadAll(addResp.Body)
+	if err != nil {
+		log.Print("Error: when reading additional coronavirus response")
+		return info
+	}
+
+	var result AddResponse
+	err = json.Unmarshal(bodyBytes, &result)
+	if err != nil {
+		log.Print("Error: when unmarhsal additional coronavirus response")
+		return info
+	}
+
+	if info.Confirmed < result.Cases {
+		info.Confirmed = result.Cases
+	}
+	if info.Deaths < result.Deaths {
+		info.Deaths = result.Deaths
+	}
+	if info.Cured < result.Recovered {
+		info.Cured = result.Recovered
+	}
+
+	addResp, err = c.httpClient.Get(coronavirusAddApi + "/countries/russia")
+	if err != nil {
+		log.Print("Error: when getting additional coronavirus response")
+		return info
+	}
+	defer addResp.Body.Close()
+
+	bodyBytes, err = ioutil.ReadAll(addResp.Body)
+	if err != nil {
+		log.Print("Error: when reading additional coronavirus response")
+		return info
+	}
+
+	var rusResult AddResponse
+	err = json.Unmarshal(bodyBytes, &rusResult)
+	if err != nil {
+		log.Print("Error: when unmarhsal additional coronavirus response")
+		return info
+	}
+
+	for i, country := range info.Countries {
+		if strings.EqualFold(country.Ru, "Россия") {
+			if country.Confirmed < rusResult.Cases {
+				country.Confirmed = rusResult.Cases
+			}
+			if country.Deaths < rusResult.Deaths {
+				country.Deaths = rusResult.Deaths
+			}
+			if country.Cured < rusResult.Recovered {
+				country.Cured = rusResult.Recovered
+			}
+			info.Countries[i] = country
+		}
+	}
+	return info
 }
