@@ -403,6 +403,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 				}
 				if curRegInfo.Ru == "Россия" {
 					text += "\nСтатистика заражений по рагионам России: \n" + c.printFireCities(currentStatus)
+					text += "\nЦифры могут разниться с общим количеством заразившихся в стране."
 				}
 				response.Text(text)
 			} else {
