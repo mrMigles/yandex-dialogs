@@ -23,14 +23,14 @@ var mongoConnection = common.GetEnv("COMMON_MONGO_CONNECTION", "")
 var databaseName = common.GetEnv("COMMON_DATABASE_NAME", "common")
 var coronavirusApi = common.GetEnv("CORONAVIRUS_API", "")
 
-var fullFirstPhrase = "На сегодняшний день в мире зафиксировано %d %s заражения коронавирусной инфекцией%s. \n%d %s умерли от болезни%s. \nВыздоровевших - %d %s. \nОсновные очаги заражения: %s. \nВ России количество заразившихся достигло %d %s%s."
-var epicentr = "Вот 20 стран, с наибольшим количеством заразившихся: %s\n"
+var fullFirstPhrase = "На сегодняшний день в мире зафиксировано %d %s заражения коронавирусной инфекцией%s. \n%d %s умерли от болезни%s. \nВыздоровело - %d %s. \nОсновные очаги заражения: %s. \nВ России количество заразившихся достигло %d %s%s."
+var epicentr = "Вот 20 стран, с наибольшим количеством заразившихся: \n%s"
 var moreThanYesterday = ", это на %d больше, чем вчера"
 var moreThenDay = ", за сутки это число увеличилось на %d"
 var moreThanLastDay = ", их количество выросло на %d за последний день"
 
-var countryInfo = "В регионе \"%s\" было зафиксировано %d %s заражения%s. \n%d %s умерли от болезни%s. \nВыздоровевших - %d %s%s."
-var countryInfoWithoutY = "В регионе \"%s\" было зафиксировано %d %s заражения. \n%d %s умерли от болезни. \nВыздоровевших - %d %s."
+var countryInfo = "В регионе \"%s\" было зафиксировано %d %s заражения%s. \n%d %s умерли от болезни%s. \nВыздоровело - %d %s%s."
+var countryInfoWithoutY = "В регионе \"%s\" было зафиксировано %d %s заражения. \n%d %s умерли от болезни. \nВыздоровело - %d %s."
 
 var funWords = []string{"когда", "эпидемия", "консерв"}
 var statsWords = []string{"статистик", "стран", "город", "област"}
@@ -72,8 +72,8 @@ var symptomsPhrases = []string{"Симптомы во многом сходны 
 	"\n - Высокая температура. " +
 	"\n - Кашель или боль в горле. " +
 	"\n Если у вас есть аналогичные симптомы, подумайте о следующем: " +
-	"\n - Вы посещали в последние две недели в зоны повышенного риска (это Китай, Южная Корея, Италия или другие страны с эпидемией)? " +
-	"\n - Вы были в контакте с кем-то, кто посещал в последние две недели в зоны повышенного риска? " +
+	"\n - Вы посещали в последние две неделизоны повышенного риска (это Китай, Италия или другие страны с вспышкой заболевания)? " +
+	"\n - Вы были в контакте с кем-то, кто посещал в последние две недели зоны повышенного риска? " +
 	"\nЕсли ответ на эти вопросы положителен - к симптомам следует отнестись максимально внимательно, постарайтесь незамедлительно обратиться за медицинской помощью. "}
 
 var masksPhrases = []string{"Теоретически, вряд ли маски очень полезны. Недостатков у них очень много. Но если всё таки хочется их носить, соблюдайте следующие правила:" +
@@ -395,7 +395,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 					text += fmt.Sprintf(countryInfoWithoutY, curRegInfo.Ru, curRegInfo.Confirmed, Plural(curRegInfo.Confirmed, "случай", "случая", "случаев"), curRegInfo.Deaths, Plural(curRegInfo.Deaths, "человек", "человека", "человек"), curRegInfo.Cured, Plural(curRegInfo.Cured, "человек", "человека", "человек"))
 				}
 				if curRegInfo.Ru == "Россия" {
-					text += "\nСтатистика заражений по городам России: " + c.printFireCities(currentStatus)
+					text += "\nСтатистика заражений по городам России: \n" + c.printFireCities(currentStatus)
 				}
 				response.Text(text)
 			} else {
@@ -564,7 +564,7 @@ func (c Coronavirus) printFireCities(dayStatus *DayStatus) string {
 		}
 		strFire = append(strFire, str)
 	}
-	return strings.Join(strFire, ", ")
+	return strings.Join(strFire, "\n")
 }
 
 func (c Coronavirus) grabData() *DayStatus {
