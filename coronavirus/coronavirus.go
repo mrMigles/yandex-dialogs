@@ -402,7 +402,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 					text += fmt.Sprintf(countryInfoWithoutY, curRegInfo.Ru, curRegInfo.Confirmed, Plural(curRegInfo.Confirmed, "случай", "случая", "случаев"), curRegInfo.Deaths, Plural(curRegInfo.Deaths, "человек", "человека", "человек"), curRegInfo.Cured, Plural(curRegInfo.Cured, "человек", "человека", "человек"))
 				}
 				if curRegInfo.Ru == "Россия" {
-					text += "\nСтатистика заражений по рагионам России: \n" + c.printFireCities(currentStatus)
+					text += "\nСтатистика заражений по регионам России: \n" + c.printFireCities(currentStatus)
 					text += "\nЦифры могут разниться с общим количеством заразившихся в стране."
 				}
 				response.Text(text)
