@@ -24,14 +24,14 @@ var databaseName = common.GetEnv("COMMON_DATABASE_NAME", "common")
 var coronavirusApi = common.GetEnv("CORONAVIRUS_API", "")
 var coronavirusAddApi = common.GetEnv("CORONAVIRUS_ADDITIONAL_API", "")
 
-var fullFirstPhrase = "На сегодняшний день в мире зафиксировано %d %s заражения коронавирусной инфекцией%s. \n%d %s умерли от болезни%s. \nВыздоровело - %d %s. \nОсновные очаги заражения: %s. \nВ России количество заразившихся достигло %d %s%s."
+var fullFirstPhrase = "На сегодняшний день в мире зафиксировано %d %s заражения коронавирусной инфекцией%s. \n%d %s умерли от болезни%s. \nВыздоровели - %d %s. \nОсновные очаги заражения: %s. \nВ России количество заразившихся достигло %d %s%s."
 var epicentr = "Вот 20 стран, с наибольшим количеством заразившихся: \n%s"
 var moreThanYesterday = ", это на %d больше, чем вчера"
 var moreThenDay = ", за сутки это число увеличилось на %d"
 var moreThanLastDay = ", их количество выросло на %d за последний день"
 
-var countryInfo = "В регионе \"%s\" было зафиксировано %d %s заражения%s. \n%d %s умерли от болезни%s. \nВыздоровело - %d %s%s."
-var countryInfoWithoutY = "В регионе \"%s\" было зафиксировано %d %s заражения. \n%d %s умерли от болезни. \nВыздоровело - %d %s."
+var countryInfo = "В регионе \"%s\" было зафиксировано %d %s заражения%s. \n%d %s умерли от болезни%s. \nВыздоровели - %d %s%s."
+var countryInfoWithoutY = "В регионе \"%s\" было зафиксировано %d %s заражения. \n%d %s умерли от болезни. \nВыздоровели - %d %s."
 
 var funWords = []string{"когда", "эпидемия", "консерв"}
 var statsWords = []string{"статистик", "стран", "город", "област"}
@@ -402,8 +402,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 					text += fmt.Sprintf(countryInfoWithoutY, curRegInfo.Ru, curRegInfo.Confirmed, Plural(curRegInfo.Confirmed, "случай", "случая", "случаев"), curRegInfo.Deaths, Plural(curRegInfo.Deaths, "человек", "человека", "человек"), curRegInfo.Cured, Plural(curRegInfo.Cured, "человек", "человека", "человек"))
 				}
 				if curRegInfo.Ru == "Россия" {
-					text += "\nСтатистика заражений по регионам России: \n" + c.printFireCities(currentStatus)
-					text += "\nЦифры могут разниться с общим количеством заразившихся в стране."
+					text += fmt.Sprintf("\nКоронавирус был зафиксирован в %d %s страны. \nВот 20 регионов, с наибольшим количеством заразившихся: \n%s", len(currentStatus.Current.Cities), Plural(len(currentStatus.Current.Cities), "регионе", "регионах", "регионах"), c.printFireCities(currentStatus))
 				}
 				response.Text(text)
 			} else {
@@ -561,7 +560,8 @@ func (c Coronavirus) printFire(dayStatus *DayStatus) string {
 
 func (c Coronavirus) printFireCities(dayStatus *DayStatus) string {
 	strFire := make([]string, 0)
-	for _, city := range dayStatus.Current.Cities {
+	for i := 0; i < 20; i++ {
+		city := dayStatus.Current.Cities[i]
 		yesInf := findRegion(dayStatus.Yesterday.Countries, dayStatus.Yesterday.Cities, city.Ru)
 		if yesInf == nil {
 			yesInf = &city
