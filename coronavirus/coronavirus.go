@@ -34,7 +34,7 @@ var countryInfo = "В регионе \"%s\" было зафиксировано 
 var countryInfoWithoutY = "В регионе \"%s\" было зафиксировано %d %s заражения. \n%d %s умерли от болезни. \nВыздоровели - %d %s."
 
 var funWords = []string{"когда", "эпидемия", "консерв"}
-var statsWords = []string{"статистик", "стран", "город", "област"}
+var statsWords = []string{"статистик"}
 var yesWord = "да"
 var yesterdayNews = []string{"вчера", "прошлы"}
 var epicentrWords = []string{"очаг", "самый", "самое", "заразивших", "заражен"}
@@ -271,6 +271,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			response.Text("Это твой личный гид в хроники коронавируса. Полезный навык, который помогает подготовиться на случай возможной эпидемии и быть всегда в курсе текущей ситуации. " +
 				"\nВы можете спросить навык о статистике заболевания по регионам, узнать про очаги заражения, а также прослушать важные новости." +
 				"\nМожешь спросить о симптомах коронавируса или о том, как от него защититься." +
+				"\nДанные статистики заражений были взяты из источника JHU и Coronavirus Monitor." +
 				"\nВы можете оставить отзыв или предложение в каталоге навыков, либо написав мне в навыке \"Говорящая Почта\" на номер 1-3-2-6.")
 			response.Button("Новости", "", true)
 			response.Button("Статистика", "", true)
@@ -402,7 +403,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 					text += fmt.Sprintf(countryInfoWithoutY, curRegInfo.Ru, curRegInfo.Confirmed, Plural(curRegInfo.Confirmed, "случай", "случая", "случаев"), curRegInfo.Deaths, Plural(curRegInfo.Deaths, "человек", "человека", "человек"), curRegInfo.Cured, Plural(curRegInfo.Cured, "человек", "человека", "человек"))
 				}
 				if curRegInfo.Ru == "Россия" {
-					text += fmt.Sprintf("\nКоронавирус был зафиксирован в %d %s страны. \nВот 20 регионов, с наибольшим количеством заразившихся: \n%s", len(currentStatus.Current.Cities), Plural(len(currentStatus.Current.Cities), "регионе", "регионах", "регионах"), c.printFireCities(currentStatus))
+					text += fmt.Sprintf("\nКоронавирус был зафиксирован в %d %s страны. \nВот 10 регионов, с наибольшим количеством заразившихся: \n%s\nПроизнесите название города или области, чтобы узнать статистику по этому региону.", len(currentStatus.Current.Cities), Plural(len(currentStatus.Current.Cities), "регионе", "регионах", "регионах"), c.printFireCities(currentStatus))
 				}
 				response.Text(text)
 			} else {
@@ -560,7 +561,7 @@ func (c Coronavirus) printFire(dayStatus *DayStatus) string {
 
 func (c Coronavirus) printFireCities(dayStatus *DayStatus) string {
 	strFire := make([]string, 0)
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 10; i++ {
 		city := dayStatus.Current.Cities[i]
 		yesInf := findRegion(dayStatus.Yesterday.Countries, dayStatus.Yesterday.Cities, city.Ru)
 		if yesInf == nil {
