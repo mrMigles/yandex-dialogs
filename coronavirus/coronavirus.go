@@ -87,6 +87,9 @@ type DayStatus struct {
 	bongo.DocumentBase `bson:",inline"`
 	Current            CoronavirusInfo `json:"current"`
 	Yesterday          CoronavirusInfo `json:"yesterday"`
+	RusCases           int             `json:"rusCases"`
+	RusDeaths          int             `json:"rusDeaths"`
+	RusRecovered       int             `json:"rusRecovered"`
 }
 
 type CoronavirusInfo struct {
@@ -268,10 +271,10 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 		}
 
 		if containsIgnoreCase(request.Text(), helpWords) {
-			response.Text("Это твой личный гид в хроники коронавируса. Полезный навык, который помогает подготовиться на случай возможной эпидемии и быть всегда в курсе текущей ситуации. " +
+			response.Text("Это твой личный гид в хроники коронавируса. Полезный навык, который помогает быть всегда в курсе текущей ситуации с коронавирусом в России и мире. " +
 				"\nВы можете спросить навык о статистике заболевания по регионам, узнать про очаги заражения, а также прослушать важные новости." +
 				"\nМожешь спросить о симптомах коронавируса или о том, как от него защититься." +
-				"\nДанные статистики заражений были взяты из источника JHU и Coronavirus Monitor." +
+				"\nДанные статистики заражений были взяты из источника Johns Hopkins University и сайта Coronavirus Monitor." +
 				"\nВы можете оставить отзыв или предложение в каталоге навыков, либо написав мне в навыке \"Говорящая Почта\" на номер 1-3-2-6.")
 			response.Button("Новости", "", true)
 			response.Button("Статистика", "", true)
@@ -516,6 +519,10 @@ func Plural(n int, singular, plural1, plural2 string) string {
 	slice := strconv.Itoa(n)
 	last := slice[len(slice)-1:]
 
+	if n > 9 && n < 21 {
+		return plural2
+	}
+
 	switch last {
 	case "1":
 		return singular
@@ -629,7 +636,7 @@ func (c Coronavirus) grabData() *DayStatus {
 		AllNews:       allNews,
 	}
 
-	currentInfo = c.enrichCoronaInfo(currentInfo)
+	currentInfo = c.enrichCoronaInfo(currentInfo, currentStatus)
 
 	if currentStatus == nil {
 		currentStatus = &DayStatus{Current: currentInfo, Yesterday: currentInfo}
@@ -648,7 +655,7 @@ func (c Coronavirus) grabData() *DayStatus {
 	return currentStatus
 }
 
-func (c Coronavirus) enrichCoronaInfo(info CoronavirusInfo) CoronavirusInfo {
+func (c Coronavirus) enrichCoronaInfo(info CoronavirusInfo, status *DayStatus) CoronavirusInfo {
 	addResp, err := c.httpClient.Get(coronavirusAddApi + "/all")
 	if err != nil {
 		log.Print("Error: when getting additional coronavirus response")
@@ -701,14 +708,26 @@ func (c Coronavirus) enrichCoronaInfo(info CoronavirusInfo) CoronavirusInfo {
 
 	for i, country := range info.Countries {
 		if strings.EqualFold(country.Ru, "Россия") {
-			if country.Confirmed < rusResult.Cases {
+			if rusResult.Cases > 0 {
 				country.Confirmed = rusResult.Cases
 			}
-			if country.Deaths < rusResult.Deaths {
+			if rusResult.Deaths > 0 {
 				country.Deaths = rusResult.Deaths
 			}
-			if country.Cured < rusResult.Recovered {
+			if rusResult.Recovered > 0 {
 				country.Cured = rusResult.Recovered
+			}
+
+			if status != nil {
+				if status.RusCases > country.Confirmed {
+					country.Confirmed = status.RusCases
+				}
+				if status.RusDeaths > country.Deaths {
+					country.Deaths = status.RusDeaths
+				}
+				if status.RusRecovered > country.Cured {
+					country.Cured = status.RusRecovered
+				}
 			}
 			info.Countries[i] = country
 		}
