@@ -35,6 +35,7 @@ var countryInfoWithoutY = "В регионе \"%s\" было зафиксиро�
 
 var funWords = []string{"когда", "эпидемия", "консерв"}
 var statsWords = []string{"статистик"}
+var sourcesWords = []string{"источник", "откуда", "данны"}
 var yesWord = "да"
 var yesterdayNews = []string{"вчера", "прошлы"}
 var epicentrWords = []string{"очаг", "самый", "самое", "заразивших", "заражен"}
@@ -274,15 +275,27 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			response.Text("Это твой личный гид в хроники коронавируса. Полезный навык, который помогает быть всегда в курсе текущей ситуации с коронавирусом в России и мире. " +
 				"\nВы можете спросить навык о статистике заболевания по регионам, узнать про очаги заражения, а также прослушать важные новости." +
 				"\nМожешь спросить о симптомах коронавируса или о том, как от него защититься." +
-				"\nДанные статистики заражений были взяты из источника Johns Hopkins University и сайта Coronavirus Monitor." +
 				"\nВы можете оставить отзыв или предложение в каталоге навыков, либо написав мне в навыке \"Говорящая Почта\" на номер 1-3-2-6.")
 			response.Button("Новости", "", true)
 			response.Button("Статистика", "", true)
 			response.Button("Очаги заражения", "", true)
 			response.Button("Симптомы", "", true)
 			response.Button("Как защититься", "", true)
+			response.Button("Источники данных", "", true)
 			response.Button("Оценить навык", "https://dialogs.yandex.ru/store/skills/d5087c0d-hroniki-koronavirusa", false)
 			response.Button("Написать на почту (1326)", "https://dialogs.yandex.ru/store/skills/eacbce8f-govoryashaya-po", false)
+			response.Button("Выйти", "", true)
+			return response
+		}
+
+		if containsIgnoreCase(request.Text(), sourcesWords) {
+			response.Text("Навык использует несколько источников для формирования статистики. Это данные Johns Hopkins University, Роспотребнадзора и сайта Coronavirus Monitor.")
+			response.Button("JHU мониторинг", "https://www.arcgis.com/apps/opsdashboard/index.html#/bda7594740fd40299423467b48e9ecf6", false)
+			response.Button("Роспотребнадзор", "https://www.rospotrebnadzor.ru/", false)
+			response.Button("Coronavirus Monitor", "https://coronavirus-monitor.ru/", false)
+			response.Button("Новости", "", true)
+			response.Button("Статистика", "", true)
+			response.Button("Очаги заражения", "", true)
 			response.Button("Выйти", "", true)
 			return response
 		}
@@ -416,6 +429,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			response.Button("Новости", "", true)
 			response.Button("Статистика", "", true)
 			response.Button("Очаги заражения", "", true)
+			response.Button("Источники данных", "", true)
 			response.Button("Симптомы", "", true)
 			response.Button("Как защититься", "", true)
 			response.Button("Выйти", "", true)
@@ -458,6 +472,7 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 		response.Button("Новости", "", true)
 		response.Button("Статистика", "", true)
 		response.Button("Очаги заражения", "", true)
+		response.Button("Источники данных", "", true)
 		response.Button("Симптомы", "", true)
 		response.Button("Как защититься", "", true)
 		response.Button("Выйти", "", true)
