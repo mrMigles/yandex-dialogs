@@ -24,7 +24,7 @@ var databaseName = common.GetEnv("COMMON_DATABASE_NAME", "common")
 var coronavirusApi = common.GetEnv("CORONAVIRUS_API", "")
 var coronavirusAddApi = common.GetEnv("CORONAVIRUS_ADDITIONAL_API", "")
 
-var fullFirstPhrase = "На сегодняшний день в мире зафиксировано %d %s заражения коронавирусной инфекцией%s. \n%d %s умерли от болезни%s. \nВыздоровели - %d %s. \nОсновные очаги заражения: %s. \nВ России количество заразившихся достигло %d %s%s."
+var fullFirstPhrase = "На сегодняшний день в мире зафиксировано %d %s заражения коронавирусной инфекцией%s. \n%d %s умерли от болезни%s. \nВыздоровели - %d %s. \n\nОсновные очаги заражения: %s. \n\nВ России количество заразившихся достигло %d %s%s.\n"
 var epicentr = "Вот 20 стран, с наибольшим количеством заразившихся: \n%s"
 var moreThanYesterday = ", это на %d больше, чем вчера"
 var moreThenDay = ", за сутки это число увеличилось на %d"
@@ -393,10 +393,17 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			return response
 		}
 
-		if len(request.Text()) > 3 && !containsIgnoreCase(request.Text(), runSkill) {
-			curRegInfo := findRegion(currentStatus.Current.Countries, currentStatus.Current.Cities, request.Text())
+		if len(request.Text()) > 3 && len(request.Text()) < 33 && !containsIgnoreCase(request.Text(), runSkill) {
+			var regName string
+			hasReg, region := hasRegion(*request)
+			if hasReg {
+				regName = *region
+			} else {
+				regName = request.Text()
+			}
+			curRegInfo := findRegion(currentStatus.Current.Countries, currentStatus.Current.Cities, regName)
 			if curRegInfo != nil {
-				yesterdayInfo := findRegion(currentStatus.Yesterday.Countries, currentStatus.Yesterday.Cities, request.Text())
+				yesterdayInfo := findRegion(currentStatus.Yesterday.Countries, currentStatus.Yesterday.Cities, regName)
 				if yesterdayInfo != nil {
 					confirmedTemplate := ""
 					if curRegInfo.Confirmed-yesterdayInfo.Confirmed > 0 {
@@ -419,11 +426,11 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 					text += fmt.Sprintf(countryInfoWithoutY, curRegInfo.Ru, curRegInfo.Confirmed, Plural(curRegInfo.Confirmed, "случай", "случая", "случаев"), curRegInfo.Deaths, Plural(curRegInfo.Deaths, "человек", "человека", "человек"), curRegInfo.Cured, Plural(curRegInfo.Cured, "человек", "человека", "человек"))
 				}
 				if curRegInfo.Ru == "Россия" {
-					text += fmt.Sprintf("\nКоронавирус был зафиксирован в %d %s страны. \nВот 10 регионов, с наибольшим количеством заразившихся: \n%s\nПроизнесите название города или области, чтобы узнать статистику по этому региону.", len(currentStatus.Current.Cities), Plural(len(currentStatus.Current.Cities), "регионе", "регионах", "регионах"), c.printFireCities(currentStatus))
+					text += fmt.Sprintf("\n\nКоронавирус был зафиксирован в %d %s страны. \nВот 10 регионов, с наибольшим количеством заразившихся: \n%s\nПроизнесите название города или области, чтобы узнать статистику по этому региону.", len(currentStatus.Current.Cities), Plural(len(currentStatus.Current.Cities), "регионе", "регионах", "регионах"), c.printFireCities(currentStatus))
 				}
 				response.Text(text)
 			} else {
-				text += fmt.Sprintf("Нет информации по региону \"%s\", попробуйте по другому.", request.Text())
+				text += fmt.Sprintf("Нет информации по региону \"%s\", попробуйте по другому.", regName)
 				response.Text(text)
 			}
 			response.Button("Новости", "", true)
@@ -527,6 +534,33 @@ func findRegion(regions []Region, cities []Region, reg string) *Region {
 		}
 	}
 	return nil
+}
+
+func hasRegion(request alice.Request) (bool, *string) {
+	if request.Request.NLU.Entities != nil {
+		for _, entity := range request.Request.NLU.Entities {
+			if entity.Type == "YANDEX.GEO" {
+				var value map[string]*string
+				//data, err := entity.Value.MarshalJSON()
+				//if err != nil {
+				//	log.Printf("Cannot marshal GEO command for request: %v", request.Text())
+				//	return false, nil
+				//}
+				err := json.Unmarshal(*entity.Value, &value)
+				if err != nil {
+					log.Printf("Cannot unmarshal GEO command for request: %v", request.Text())
+					return false, nil
+				}
+				if country, ok := value["country"]; ok {
+					return true, country
+				}
+				if city, ok := value["city"]; ok {
+					return true, city
+				}
+			}
+		}
+	}
+	return false, nil
 }
 
 // Plural помогает согласовать слово с числительным.
