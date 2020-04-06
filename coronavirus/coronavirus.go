@@ -399,8 +399,8 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			if hasReg {
 				regName = *region
 			} else {
-				if len(request.Text()) < 60 {
-					response.Text("Неизвестная команда или регион, попробуйте по другому")
+				if len(request.Text()) > 60 {
+					response.Text("Неизвестная команда или регион. Если вы хотите узнать статистику по региону - попробуйте просто произнести название.")
 					response.Button("Статистика", "", true)
 					response.Button("Очаги заражения", "", true)
 					response.Button("Количество заразившихся в Москве", "", true)
