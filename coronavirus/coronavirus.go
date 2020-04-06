@@ -25,7 +25,7 @@ var coronavirusApi = common.GetEnv("CORONAVIRUS_API", "")
 var coronavirusAddApi = common.GetEnv("CORONAVIRUS_ADDITIONAL_API", "")
 
 var fullFirstPhrase = "На сегодняшний день в мире зафиксировано %d %s заражения коронавирусной инфекцией%s. \n%d %s умерли от болезни%s. \nВыздоровели - %d %s. \n\nОсновные очаги заражения: %s. \n\nВ России количество заразившихся достигло %d %s%s.\n"
-var epicentr = "Вот 20 стран, с наибольшим количеством заразившихся: \n%s"
+var epicentr = "Вот 20 стран с наибольшим количеством заразившихся: \n%s"
 var moreThanYesterday = ", это на %d больше, чем вчера"
 var moreThenDay = ", за сутки это число увеличилось на %d"
 var moreThanLastDay = ", их количество выросло на %d за последний день"
@@ -393,12 +393,20 @@ func (c Coronavirus) HandleRequest() func(request *alice.Request, response *alic
 			return response
 		}
 
-		if len(request.Text()) > 3 && len(request.Text()) < 33 && !containsIgnoreCase(request.Text(), runSkill) {
+		if len(request.Text()) > 3 && !containsIgnoreCase(request.Text(), runSkill) {
 			var regName string
 			hasReg, region := hasRegion(*request)
 			if hasReg {
 				regName = *region
 			} else {
+				if len(request.Text()) < 60 {
+					response.Text("Неизвестная команда или регион, попробуйте по другому")
+					response.Button("Статистика", "", true)
+					response.Button("Очаги заражения", "", true)
+					response.Button("Количество заразившихся в Москве", "", true)
+					response.Button("Выйти", "", true)
+					return response
+				}
 				regName = request.Text()
 			}
 			curRegInfo := findRegion(currentStatus.Current.Countries, currentStatus.Current.Cities, regName)
