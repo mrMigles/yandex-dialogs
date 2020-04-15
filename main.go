@@ -14,6 +14,7 @@ import (
 	"yandex-dialogs/coronavirus"
 	"yandex-dialogs/masha"
 	"yandex-dialogs/phrases_generator"
+	"yandex-dialogs/stalker"
 	"yandex-dialogs/voice_mail"
 )
 
@@ -44,6 +45,7 @@ func buildHandlers() []Dialog {
 	dialogs = append(dialogs, voice_mail.NewVoiceMail())
 	dialogs = append(dialogs, masha.NewMasha(2700))
 	dialogs = append(dialogs, coronavirus.NewCoronavirus())
+	dialogs = append(dialogs, stalker.NewStalker())
 	return dialogs
 }
 
