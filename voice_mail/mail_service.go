@@ -54,7 +54,25 @@ func (m MailService) SaveUser(user *User) error {
 }
 
 func (m MailService) SendMessage(message *Message) error {
+	toUser, _ := m.findUserByNumber(message.To)
+	if toUser == nil && message.To != 7070 && message.To != 8800 && message.To != 1000 {
+		log.Printf("Message from user %d didn't send to user %d because user doesn't exist", message.From, message.To)
+		return nil
+	}
+	if toUser != nil && contains(toUser.BlackList, message.From) {
+		log.Printf("Message from user %d didn't send to user %d because of blacklist", message.From, message.To)
+		return nil
+	}
 	return m.connection.Collection("messages").Save(message)
+}
+
+func contains(s []int, e int) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
 
 func (m MailService) ReadMessage(user *User) *Message {
@@ -94,6 +112,22 @@ func (m MailService) findUser(userId string) (*User, error) {
 			return nil, err
 		}
 		log.Printf("User %s not found", userId)
+		return nil, nil
+	} else {
+		log.Printf("Found user: %+v", user)
+	}
+	return user, nil
+}
+
+func (m MailService) findUserByNumber(number int) (*User, error) {
+	user := &User{}
+	err := m.connection.Collection("users").FindOne(bson.M{"number": number}, user)
+
+	if err != nil {
+		if _, ok := err.(*net.OpError); ok {
+			return nil, err
+		}
+		log.Printf("User %d not found", number)
 		return nil, nil
 	} else {
 		log.Printf("Found user: %+v", user)
