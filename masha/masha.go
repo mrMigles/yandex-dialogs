@@ -14,10 +14,13 @@ import (
 )
 
 var helloSentences = [...]string{"Привет", "Добрый день", "Здравствуйте"}
+var helloAnswers = [...]string{"Привет, как дела?", "Добрый день", "Здравствуйте", "Что нового?", "как дела?", "Ну давай поболтаем"}
 
 var bySentences = [...]string{"Хорошо поболтали! Запиши мой номер - 8-8-0-0, буду ждать твоего письма.", "Хорошего дня!", "Отличный разговор! Напиши мне, 8-8-0-0", "Окей, буду ждать тут", "Хорошо поболтали, но учти, в следующий раз я могу измениться!", "Спасибо за разговор! Можешь писать мне в говорящую почту, на номер 8-8-0-0"}
 
 var errorSentences = [...]string{"Даже не знаю, спроси что нибудь ещё", "Что-то не могу сообразить, давай поменяем тему", "Не могу сообразить, спроси ещё что нибудь", "Даже не знаю, спроси по другому"}
+
+var failSentences = [...]string{"Что-то мне не хорошо, попробуй зайти попозже", "Что-то не могу нормально соображать, давай притормозим общение на пару часиков", "Я плохо себя чувствую, напиши мне позднее"}
 
 var exitWords = []string{"отмена", "хватит", "выйти", "закончи", "закрыть", "выход"}
 
@@ -56,8 +59,10 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 		text := request.Text()
 		if request.Session.New == true {
 			answer := helloSentences[rand.Intn(len(helloSentences))]
-			response.Text(fmt.Sprintf("Внимание, диалог может содержать взрослый и непристойный контент, если Вам нет восемнадцати лет, пожалуйста, закройте навык, лучше запустите навык Хроники коронавируса!. - %s! Давай поболтаем?", answer))
-			response.Button("Хроники коронавируса", "https://dialogs.yandex.ru/store/skills/d5087c0d-hroniki-koronavirusa", false)
+			quest := helloAnswers[rand.Intn(len(helloAnswers))]
+			response.Text(fmt.Sprintf("Внимание, диалог может содержать взрослый и непристойный контент, если Вам нет восемнадцати лет, пожалуйста, закройте навык!. \n- %s! Давай поболтаем?", answer))
+			response.Button("Оценить или поддержать Машу", "https://dialogs.yandex.ru/store/skills/67b197f0-nedetskie-razgovory", false)
+			response.Button(quest, "", true)
 			return response
 		} else if strings.EqualFold(text, "всё") || strings.EqualFold(text, "все") || containsIgnoreCase(text, exitWords) {
 			answer := bySentences[rand.Intn(len(bySentences))]
@@ -102,6 +107,10 @@ func (v Masha) GetAnswer(userID string, text string) (string, error) {
 		return errorSentences[rand.Intn(len(errorSentences))], err
 	}
 	bodyString := string(bodyBytes)
+	if bodyString == "" {
+		log.Print("fail, empty message")
+		return failSentences[rand.Intn(len(failSentences))], nil
+	}
 	return bodyString, nil
 }
 
