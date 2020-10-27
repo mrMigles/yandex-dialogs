@@ -43,7 +43,7 @@ func buildHandlers() []Dialog {
 	var dialogs []Dialog
 	dialogs = append(dialogs, phrases_generator.NewDialog())
 	dialogs = append(dialogs, voice_mail.NewVoiceMail())
-	dialogs = append(dialogs, masha.NewMasha(2700))
+	dialogs = append(dialogs, masha.NewMasha(2900))
 	dialogs = append(dialogs, coronavirus.NewCoronavirus())
 	dialogs = append(dialogs, stalker.NewStalker())
 	return dialogs

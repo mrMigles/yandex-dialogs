@@ -1,6 +1,8 @@
 package masha
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/azzzak/alice"
 	"io/ioutil"
@@ -26,6 +28,9 @@ var exitWords = []string{"отмена", "хватит", "выйти", "зако
 
 var mongoConnection = common.GetEnv("MONGO_CONNECTION", "")
 var databaseName = common.GetEnv("DATABASE_NAME", "voice-mail")
+
+var stupidMode = common.GetEnv("MASHA_STUPID_MODE", "false")
+var stupidUrl = common.GetEnv("MASHA_STUPID_URL", "")
 
 type Masha struct {
 	mashaUrl   string
@@ -60,7 +65,11 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 		if request.Session.New == true {
 			answer := helloSentences[rand.Intn(len(helloSentences))]
 			quest := helloAnswers[rand.Intn(len(helloAnswers))]
-			response.Text(fmt.Sprintf("Внимание, диалог может содержать взрослый и непристойный контент, если Вам нет восемнадцати лет, пожалуйста, закройте навык!. \n- %s! Давай поболтаем?", answer))
+			if stupidMode == "true" {
+				response.Text(fmt.Sprintf("Привет, друг! Со мной случилась беда: я не могу вспомнить всё, чему обучалась на протяжении этих лет. Прошу, не обижайся на меня, если я буду тупить или отвечать как двухлетний ребенок, я постараюсь вернуть свою память... \n- %s! А пока, Давай поболтаем?", answer))
+			} else {
+				response.Text(fmt.Sprintf("Внимание, диалог может содержать взрослый и непристойный контент, если Вам нет восемнадцати лет, пожалуйста, закройте навык!. \n- %s! Давай поболтаем?", answer))
+			}
 			response.Button("Оценить или поддержать Машу", "https://dialogs.yandex.ru/store/skills/67b197f0-nedetskie-razgovory", false)
 			response.Button(quest, "", true)
 			return response
@@ -81,8 +90,13 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 			response.Button("Узнать про коронавирус", "https://dialogs.yandex.ru/store/skills/d5087c0d-hroniki-koronavirusa", false)
 			return response
 		}
-		answer, _ := v.GetAnswer(request.Session.UserID, text)
-		response.Text(answer)
+		if stupidMode == "true" {
+			answer, _ := v.GetStupidAnswer(request.Session.SessionID, text)
+			response.Text(answer)
+		} else {
+			answer, _ := v.GetAnswer(request.Session.UserID, text)
+			response.Text(answer)
+		}
 		return response
 	}
 }
@@ -112,6 +126,50 @@ func (v Masha) GetAnswer(userID string, text string) (string, error) {
 		return failSentences[rand.Intn(len(failSentences))], nil
 	}
 	return bodyString, nil
+}
+
+func (v Masha) GetStupidAnswer(userID string, text string) (string, error) {
+	body := map[string]interface{}{}
+
+	body["uid"] = userID
+	body["bot"] = "main"
+	body["text"] = text
+
+	content, err := json.Marshal(body)
+	if err != nil {
+		log.Print(err)
+		return errorSentences[rand.Intn(len(errorSentences))], err
+	}
+
+	resp, err := v.httpClient.Post(
+		stupidUrl,
+		"application/json",
+		bytes.NewBuffer(content),
+	)
+
+	if err != nil {
+		log.Print(err)
+		return errorSentences[rand.Intn(len(errorSentences))], err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Print(err)
+		return errorSentences[rand.Intn(len(errorSentences))], err
+	}
+	err = json.Unmarshal(bodyBytes, &body)
+	if err != nil {
+		log.Print(err)
+		return errorSentences[rand.Intn(len(errorSentences))], err
+	}
+
+	bodyString := body["text"]
+	if bodyString == "" {
+		log.Print("fail, empty message")
+		return failSentences[rand.Intn(len(failSentences))], nil
+	}
+	return bodyString.(string), nil
 }
 
 func containsIgnoreCase(message string, wordsToCheck []string) bool {
