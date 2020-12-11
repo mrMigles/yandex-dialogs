@@ -26,7 +26,7 @@ var replyWords = []string{"ответить", "ответ", "reply"}
 var repeatWords = []string{"повтор", "расслышал"}
 var checkMailWords = []string{"открой почту", "сообщения", "входящие", "проверь почту", "проверить почту", "что там у меня", "есть новые сообщения", "письма", "ящик", "проверь", "проверить"}
 var blackListWords = []string{"забань", "добавь в черный список", "черный список", "чёрный список"}
-var clearBlackListWords = []string{"очистить черный список", "очисти черный список", "очисть черный список"}
+var clearBlackListWords = []string{"очистить черный список", "очисти черный список", "очисть черный список", "очистить чёрный список"}
 var myNumberWords = []string{"мой номер", "какой номер", "меня номер"}
 var reviewWords = []string{"отзыв", "предложение", "оценк"}
 var datingWords = []string{"знаком", "случайн", "рандом", "наугад"}
@@ -268,7 +268,21 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Button("Отправить", "", true)
 					response.Button("Проверить почту", "", true)
 					response.Button("Мой номер", "", true)
+					response.Button("Очистить черный список", "", true)
 					response.Button("Закончить", "", true)
+					return response
+				}
+
+				if containsIgnoreCase(request.Text(), clearBlackListWords) {
+					currentUser.BlackList = currentUser.BlackList[:0]
+					v.mailService.SaveUser(currentUser)
+
+					text := fmt.Sprintf("Черный список был очищен. Хотите проверить почту?")
+					response.Text(text)
+					currentState.state = "root"
+					response.Button("Отправить", "", true)
+					response.Button("Проверить почту", "", true)
+					response.Button("Выйти", "", true)
 					return response
 				}
 
@@ -386,6 +400,19 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Text(text)
 					currentState.state = "ask_send_text"
 					response.Button("Отмена", "", true)
+					return response
+				}
+
+				if containsIgnoreCase(request.Text(), clearBlackListWords) {
+					currentUser.BlackList = currentUser.BlackList[:0]
+					v.mailService.SaveUser(currentUser)
+
+					text := fmt.Sprintf("Черный список был очищен. Хотите проверить почту?")
+					response.Text(text)
+					currentState.state = "root"
+					response.Button("Отправить", "", true)
+					response.Button("Проверить почту", "", true)
+					response.Button("Выйти", "", true)
 					return response
 				}
 

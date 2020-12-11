@@ -71,6 +71,7 @@ func (v Masha) HandleRequest() func(request *alice.Request, response *alice.Resp
 				response.Text(fmt.Sprintf("Внимание, диалог может содержать взрослый и непристойный контент, если Вам нет восемнадцати лет, пожалуйста, закройте навык!. \n- %s! Давай поболтаем?", answer))
 			}
 			response.Button("Оценить или поддержать Машу", "https://dialogs.yandex.ru/store/skills/67b197f0-nedetskie-razgovory", false)
+			response.Button("Написать Маше на почту", "https://dialogs.yandex.ru/store/skills/eacbce8f-govoryashaya-po", false)
 			response.Button(quest, "", true)
 			return response
 		} else if strings.EqualFold(text, "всё") || strings.EqualFold(text, "все") || containsIgnoreCase(text, exitWords) {
