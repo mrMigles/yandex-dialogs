@@ -21,7 +21,8 @@ var nextWords = []string{"дальше", "еще", "ещё", "еше", "след
 var cancelWords = []string{"отмена", "хватит", "все", "всё", "закончи", "закончить", "выход", "выйди", "выйти"}
 var newMessageWords = []string{"новое сообщение", "новое письмо", "отправить", "отправь", "письмо"}
 var sendWords = []string{"отправить", "отправляй", "запускай"}
-var phoneBookWord = []string{"добавить", "книг", "записн", "книжк"}
+var phoneBookWord = []string{"книг", "записн", "книжк"}
+var addPhoneBookWord = []string{"добавить", "запомни", "запиши", "добавь"}
 var replyWords = []string{"ответить", "ответ", "reply"}
 var repeatWords = []string{"повтор", "расслышал"}
 var checkMailWords = []string{"открой почту", "сообщения", "входящие", "проверь почту", "проверить почту", "что там у меня", "есть новые сообщения", "письма", "ящик", "проверь", "проверить"}
@@ -188,10 +189,14 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				v.states[currentUser.Id].state = "ask_start_listen_mail"
 				response.Button("Да", "", true)
 				response.Button("Нет", "", true)
+				response.Button("Помощь", "", true)
 			} else {
 				text += "У вас нет новых сообщений. Скажите - отправить, чтобы отправить новое сообщение."
 				response.Button("Отправить", "", true)
 				response.Button("Мой номер", "", true)
+				response.Button("Записная книжка", "", true)
+				response.Button("Черный список", "", true)
+				response.Button("Помощь", "", true)
 				response.Button("Выйти", "", true)
 			}
 			response.Text(text)
@@ -241,12 +246,13 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				if containsIgnoreCase(request.Text(), myNumberWords) {
 					response.Text(fmt.Sprintf("Ваш номер: %s", v.printNumber(currentUser.Number)))
 					response.Button("Отправить", "", true)
+					response.Button("Проверить почту", "", true)
 					response.Button("Выйти", "", true)
 					return response
 				}
 
 				// for phone book words
-				if containsIgnoreCase(request.Text(), phoneBookWord) {
+				if containsIgnoreCase(request.Text(), addPhoneBookWord) {
 					if currentState.context == nil || currentState.context.To == 0 {
 						response.Text("Вы должны отправить сообщение на номер, перед тем как добавить его в записную книжку.")
 						response.Button("Отправить", "", true)
@@ -264,11 +270,13 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Text("Для того, чтобы отправить сообщение, скажите - отправить. " +
 						"\nЧтобы проверить почту, скажите - проверить почту. " +
 						"\nЧтобы узнать свой номер, скажите - мой номер. " +
+						"\nЧтобы познакомиться с другими пользователями навыка Вы можете отправить сообщение на номер 70-70, или просто скажите \"случайное знакомство\" вместо номера, при отправке сообщения. " +
 						"\nЧтобы отменить текущую операцию, скажите - отмена. Скажите - закончить, чтобы выйти из навыка.")
 					response.Button("Отправить", "", true)
 					response.Button("Проверить почту", "", true)
 					response.Button("Мой номер", "", true)
-					response.Button("Очистить черный список", "", true)
+					response.Button("Записная книжка", "", true)
+					response.Button("Черный список", "", true)
 					response.Button("Закончить", "", true)
 					return response
 				}
@@ -283,6 +291,59 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Button("Отправить", "", true)
 					response.Button("Проверить почту", "", true)
 					response.Button("Выйти", "", true)
+					return response
+				}
+
+				if containsIgnoreCase(request.Text(), blackListWords) {
+					var numbers []string
+					for i, number := range currentUser.BlackList {
+						if i > 15 {
+							break
+						}
+						numbers = append(numbers, v.printNumber(number))
+					}
+					text := ""
+					if len(numbers) > 0 {
+						text = fmt.Sprintf("Ваш черный список номеров: "+
+							"\n%s"+
+							"\nЭти номера не смогут отправлять Вам сообщения. "+
+							"\nЧтобы очистить, скажите \"Очистить черный список\"", strings.Join(numbers, "\n"))
+					} else {
+						text = "Ваш черный список пуст. " +
+							"\nДобавить номер в этот список можно только после получения входящего сообщения от пользователя с таким номером."
+					}
+					response.Text(text)
+					currentState.state = "root"
+					response.Button("Очистить черный список", "", true)
+					response.Button("Проверить почту", "", true)
+					response.Button("Назад", "", true)
+					return response
+				}
+
+				if containsIgnoreCase(request.Text(), phoneBookWord) {
+					var numbers []string
+					i := 0
+					for name, number := range currentUser.PhoneBook {
+						if i > 15 {
+							break
+						}
+						numbers = append(numbers, fmt.Sprintf("%s : %s", name, v.printNumber(number)))
+						i++
+					}
+					text := ""
+					if len(numbers) > 0 {
+						text = fmt.Sprintf("Ваша записная книжка номеров: "+
+							"\n%s"+
+							"\nЧтобы отправить сообщение на эти номера, просто назовите имя. ", strings.Join(numbers, "\n"))
+					} else {
+						text = "Ваша записная книжка пуста. " +
+							"\nДобавить номер в этот список можно только после получения входящего сообщения от пользователя с таким номером."
+					}
+					response.Text(text)
+					currentState.state = "root"
+					response.Button("Отправить", "", true)
+					response.Button("Проверить почту", "", true)
+					response.Button("Назад", "", true)
 					return response
 				}
 
@@ -304,6 +365,9 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				response.Text("Чтобы отправить сообщение, скажите отправить. Для того, чтобы проверить почту, скажите - проверить почту.")
 				response.Button("Отправить", "", true)
 				response.Button("Проверить почту", "", true)
+				response.Button("Мой номер", "", true)
+				response.Button("Записная книжка", "", true)
+				response.Button("Черный список", "", true)
 				response.Button("Выйти", "", true)
 				return response
 			}
@@ -324,6 +388,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					currentState.state = "ask_continue_listen_mail"
 					response.Button("Дальше", "", true)
 					response.Button("Ответить", "", true)
+					response.Button("В черный список", "", true)
 					return response
 				}
 
@@ -331,9 +396,29 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				if containsIgnoreCase(request.Text(), negativeWords) || containsIgnoreCase(request.Text(), cancelWords) {
 					currentState.state = "root"
 					currentState.context = nil
+
 					response.Text("Окей, хотите что-то ещё?")
 					response.Button("Отправить", "", true)
+					response.Button("Проверить почту", "", true)
+					response.Button("Мой номер", "", true)
+					response.Button("Записная книжка", "", true)
+					response.Button("Черный список", "", true)
 					response.Button("Нет", "", true)
+					return response
+				}
+
+				if containsIgnoreCase(request.Text(), helpWords) {
+					response.Text("Для того, чтобы отправить сообщение, скажите - отправить. " +
+						"\nЧтобы проверить почту, скажите - проверить почту. " +
+						"\nЧтобы узнать свой номер, скажите - мой номер. " +
+						"\nЧтобы познакомиться с другими пользователями навыка Вы можете отправить сообщение на номер 70-70, или просто скажите \"случайное знакомство\" вместо номера, при отправке сообщения. " +
+						"\nЧтобы отменить текущую операцию, скажите - отмена. Скажите - закончить, чтобы выйти из навыка.")
+					response.Button("Отправить", "", true)
+					response.Button("Проверить почту", "", true)
+					response.Button("Мой номер", "", true)
+					response.Button("Записная книжка", "", true)
+					response.Button("Черный список", "", true)
+					response.Button("Закончить", "", true)
 					return response
 				}
 
@@ -360,6 +445,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					currentState.context = message
 					response.Button("Дальше", "", true)
 					response.Button("Ответить", "", true)
+					response.Button("В черный список", "", true)
 					return response
 				}
 
@@ -374,6 +460,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Text(text)
 					response.Button("Дальше", "", true)
 					response.Button("Ответить", "", true)
+					response.Button("В черный список", "", true)
 					return response
 				}
 
@@ -383,6 +470,10 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					currentState.context = nil
 					response.Text("Окей, хотите что-то ещё?")
 					response.Button("Отправить", "", true)
+					response.Button("Проверить почту", "", true)
+					response.Button("Мой номер", "", true)
+					response.Button("Записная книжка", "", true)
+					response.Button("Черный список", "", true)
 					response.Button("Нет", "", true)
 					return response
 				}
@@ -452,6 +543,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					currentState.context = message
 					response.Button("Дальше", "", true)
 					response.Button("Ответить", "", true)
+					response.Button("В черный список", "", true)
 					return response
 				}
 
@@ -471,6 +563,10 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				currentState.state = "root"
 				response.Text("Окей, хотите что-то ещё?")
 				response.Button("Отправить", "", true)
+				response.Button("Проверить почту", "", true)
+				response.Button("Мой номер", "", true)
+				response.Button("Записная книжка", "", true)
+				response.Button("Черный список", "", true)
 				response.Button("Нет", "", true)
 				return response
 
@@ -481,7 +577,11 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					currentState.state = "root"
 					currentState.context = nil
 					response.Text("Окей, хотите что-то ещё?")
+					response.Button("Отправить новое", "", true)
 					response.Button("Проверить почту", "", true)
+					response.Button("Мой номер", "", true)
+					response.Button("Записная книжка", "", true)
+					response.Button("Черный список", "", true)
 					response.Button("Нет", "", true)
 					return response
 				}
@@ -542,7 +642,11 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					currentState.state = "root"
 					currentState.context = nil
 					response.Text("Окей, хотите что-то ещё?")
+					response.Button("Отправить новое", "", true)
 					response.Button("Проверить почту", "", true)
+					response.Button("Мой номер", "", true)
+					response.Button("Записная книжка", "", true)
+					response.Button("Черный список", "", true)
 					response.Button("Нет", "", true)
 					return response
 				}
@@ -590,14 +694,17 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 						response.Text("Спасибо за отзыв! Вы также можете оставить свой отзыв в Яндекс каталоге навыков.")
 						response.Button("Оценить навык", "https://dialogs.yandex.ru/store/skills/eacbce8f-govoryashaya-po", false)
 						response.Button("Проверить почту", "", true)
+						response.Button("Отправить новое", "", true)
 					} else if currentState.context.To != 7070 && phoneBookedNumber(currentUser, currentState.context.To) == nil {
 						response.Text("Сообщение отправлено! Вы можете добавить номер в записную книжку. Хотите что то ещё?")
 						response.Button("Добавить в записную книжку", "", true)
 						response.Button("Проверить почту", "", true)
+						response.Button("Отправить новое", "", true)
 						response.Button("Нет", "", true)
 						return response
 					} else {
 						response.Text("Сообщение отправлено! Хотите что-то ещё?")
+						response.Button("Отправить новое", "", true)
 						response.Button("Проверить почту", "", true)
 						response.Button("Нет", "", true)
 					}
@@ -611,6 +718,9 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Text("Окей, хотите что-то ещё?")
 					response.Button("Отправить новое", "", true)
 					response.Button("Проверить почту", "", true)
+					response.Button("Мой номер", "", true)
+					response.Button("Записная книжка", "", true)
+					response.Button("Черный список", "", true)
 					response.Button("Нет", "", true)
 					return response
 				}
@@ -625,6 +735,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				if currentState.context == nil {
 					response.Text("Произошла ошибка, попробуйте ещё раз")
 					currentState.state = "root"
+					response.Button("Отправить новое", "", true)
 					response.Button("Проверить почту", "", true)
 					response.Button("Выйти", "", true)
 					return response
@@ -643,6 +754,9 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Text("Окей, хотите что-то ещё?")
 					response.Button("Отправить новое", "", true)
 					response.Button("Проверить почту", "", true)
+					response.Button("Мой номер", "", true)
+					response.Button("Записная книжка", "", true)
+					response.Button("Черный список", "", true)
 					response.Button("Нет", "", true)
 					return response
 				}
@@ -679,6 +793,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 		}
 
 		response.Text("Произошла ошибка, попробуйте позже")
+		response.Button("Проверить почту", "", true)
 		response.Button("Закончить", "", true)
 		return response
 	}

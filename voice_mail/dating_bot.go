@@ -45,5 +45,5 @@ func (m DatingBot) CheckMails() {
 }
 
 func (m DatingBot) GetCron() string {
-	return "0 * * * *"
+	return "*/3 * * * *"
 }

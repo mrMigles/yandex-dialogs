@@ -41,5 +41,5 @@ func (m MashaBot) CheckMails() {
 }
 
 func (m MashaBot) GetCron() string {
-	return "*/5 * * * *"
+	return "* * * * *"
 }
