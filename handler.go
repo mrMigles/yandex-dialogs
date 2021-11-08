@@ -13,15 +13,6 @@ var statistics = map[string]map[string]int{}
 
 var debug = common.GetEnv("DEBUG_LOG", "false")
 
-func Handler() func(func(w http.ResponseWriter, r *http.Request)) http.Handler {
-	return func(f func(w http.ResponseWriter, r *http.Request)) http.Handler {
-		h := http.HandlerFunc(f)
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			h.ServeHTTP(w, r)
-		})
-	}
-}
-
 func JsonContentType(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

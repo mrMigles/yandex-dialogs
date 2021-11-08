@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/azzzak/alice"
 	"github.com/go-bongo/bongo"
+	"github.com/gorilla/mux"
 	"github.com/robfig/cron/v3"
 	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
@@ -174,6 +175,10 @@ type Coronavirus struct {
 	mux          sync.Mutex
 	connection   *bongo.Connection
 	httpClient   http.Client
+}
+
+func (c Coronavirus) ApiHandlers(router *mux.Router) {
+	// no implementation here
 }
 
 func NewCoronavirus() Coronavirus {

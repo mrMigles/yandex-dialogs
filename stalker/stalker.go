@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/azzzak/alice"
 	"github.com/go-bongo/bongo"
+	"github.com/gorilla/mux"
 	"gopkg.in/mgo.v2/bson"
 	"log"
 	"math/rand"
@@ -25,6 +26,10 @@ type Stalker struct {
 	connection *bongo.Connection
 	jokes      []Joke
 	context    map[string]string
+}
+
+func (c Stalker) ApiHandlers(router *mux.Router) {
+	// no implementation here
 }
 
 type Joke struct {

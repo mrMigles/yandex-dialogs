@@ -1,6 +1,7 @@
 module yandex-dialogs
 
 require (
+	github.com/agnivade/levenshtein v1.1.0
 	github.com/azzzak/alice v0.1.0
 	github.com/go-bongo/bongo v0.10.4
 	github.com/gorilla/handlers v1.4.2

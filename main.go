@@ -28,6 +28,9 @@ type Dialog interface {
 
 	// Returns state of dialog (true - ok, false - something is wrong) and additional string message.
 	Health() (result bool, message string)
+
+	// Additional custom HTTP request handlers
+	ApiHandlers(router *mux.Router)
 }
 
 var (
@@ -66,7 +69,7 @@ func main() {
 
 func handler() http.Handler {
 	r := mux.NewRouter()
-	handler := Handler()
+	handler := common.Handler()
 
 	dialogs := buildHandlers()
 
@@ -76,6 +79,8 @@ func handler() http.Handler {
 				os.Stdout,
 				handler(handleRequest(v.HandleRequest()))),
 		).Methods("POST", "OPTIONS")
+
+		v.ApiHandlers(r)
 	}
 
 	r.Handle("/health",

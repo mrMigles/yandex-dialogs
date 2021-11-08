@@ -1,17 +1,23 @@
 package voice_mail
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/azzzak/alice"
 	"github.com/go-bongo/bongo"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 	"github.com/robfig/cron/v3"
 	"hash/fnv"
 	"log"
 	"math/rand"
+	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"yandex-dialogs/common"
 )
 
 var acceptWords = []string{"да", "давай", "можно", "плюс", "ага", "угу", "дэ"}
@@ -29,6 +35,7 @@ var checkMailWords = []string{"открой почту", "сообщения", "
 var blackListWords = []string{"забань", "добавь в черный список", "черный список", "чёрный список"}
 var clearBlackListWords = []string{"очистить черный список", "очисти черный список", "очисть черный список", "очистить чёрный список"}
 var myNumberWords = []string{"мой номер", "какой номер", "меня номер"}
+var myTokenWords = []string{"токен", "секрет", "пароль"}
 var reviewWords = []string{"отзыв", "предложение", "оценк"}
 var datingWords = []string{"знаком", "случайн", "рандом", "наугад"}
 
@@ -49,9 +56,9 @@ type User struct {
 
 type Message struct {
 	bongo.DocumentBase `bson:",inline"`
-	From               int    `json:"-,"`
-	To                 int    `json:"-,"`
-	Text               string `json:"-,"`
+	From               int    `json:"from,"`
+	To                 int    `json:"to,"`
+	Text               string `json:"text,"`
 }
 
 type UserState struct {
@@ -97,6 +104,130 @@ func initBots(service *MailService) {
 
 func (v VoiceMail) GetPath() string {
 	return "/api/dialogs/voice-mail"
+}
+
+func (v VoiceMail) ApiHandlers(r *mux.Router) {
+	handler := common.Handler()
+	r.Handle("/api/v1/dialogs/voice-mail/receive",
+		handlers.LoggingHandler(
+			os.Stdout,
+			handler(v.handleReceiveRequest())),
+	).Methods("GET")
+
+	r.Handle("/api/v1/dialogs/voice-mail/send",
+		handlers.LoggingHandler(
+			os.Stdout,
+			handler(v.handleSendRequest())),
+	).Methods("POST")
+}
+
+func (v VoiceMail) handleReceiveRequest() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			w.WriteHeader(401)
+			w.Write([]byte("Unauthorized access"))
+			return
+		}
+
+		userId := common.BearerAuthHeader(authHeader)
+		if userId == "" {
+			w.WriteHeader(403)
+			w.Write([]byte("Incorrect authorization header"))
+			return
+		}
+
+		user, err := v.mailService.findUser(userId)
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte("Something went wrong"))
+			return
+		}
+		if user == nil {
+			w.WriteHeader(403)
+			w.Write([]byte("Cannot authorize receiving messages for specified user token"))
+			return
+		}
+
+		message := v.mailService.ReadMessage(user)
+
+		if message == nil {
+			w.WriteHeader(404)
+			w.Write([]byte("{}"))
+			return
+		}
+
+		w.WriteHeader(200)
+		response, err := json.Marshal(message)
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte("Something went wrong"))
+			return
+		}
+		w.Write(response)
+	}
+}
+
+func (v VoiceMail) handleSendRequest() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			w.WriteHeader(401)
+			w.Write([]byte("Unauthorized access"))
+			return
+		}
+
+		userId := common.BearerAuthHeader(authHeader)
+		if userId == "" {
+			w.WriteHeader(403)
+			w.Write([]byte("Incorrect authorization header"))
+			return
+		}
+
+		user, err := v.mailService.findUser(userId)
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte("Something went wrong"))
+			return
+		}
+		if user == nil {
+			w.WriteHeader(403)
+			w.Write([]byte("Cannot authorize receiving messages for specified user token"))
+			return
+		}
+
+		numberVar := r.PostFormValue("number")
+		if numberVar == "" {
+			w.WriteHeader(400)
+			w.Write([]byte("Incorrect number format"))
+			return
+		}
+		number, err := strconv.Atoi(numberVar)
+		if err != nil || number < 1000 || number >= 100000 {
+			w.WriteHeader(400)
+			w.Write([]byte("Incorrect number format"))
+			return
+		}
+
+		text := r.PostFormValue("text")
+		if text == "" {
+			w.WriteHeader(400)
+			w.Write([]byte("text is empty"))
+			return
+		}
+
+		message := &Message{From: user.Number, To: number, Text: text}
+		err = v.mailService.SendMessage(message)
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte("Something went wrong"))
+			return
+		}
+		w.WriteHeader(200)
+		w.Write([]byte("Sent"))
+	}
 }
 
 func (v VoiceMail) Health() (result bool, message string) {
@@ -197,6 +328,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				response.Button("Записная книжка", "", true)
 				response.Button("Черный список", "", true)
 				response.Button("Помощь", "", true)
+				response.Button("Мой токен", "", true)
 				response.Button("Выйти", "", true)
 			}
 			response.Text(text)
@@ -245,6 +377,15 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				// for my number phrase
 				if containsIgnoreCase(request.Text(), myNumberWords) {
 					response.Text(fmt.Sprintf("Ваш номер: %s", v.printNumber(currentUser.Number)))
+					response.Button("Отправить", "", true)
+					response.Button("Проверить почту", "", true)
+					response.Button("Выйти", "", true)
+					return response
+				}
+
+				// for my token phrase
+				if containsIgnoreCase(request.Text(), myTokenWords) {
+					response.Text(fmt.Sprintf("Ваш токен: \n%s", currentUser.Id))
 					response.Button("Отправить", "", true)
 					response.Button("Проверить почту", "", true)
 					response.Button("Выйти", "", true)

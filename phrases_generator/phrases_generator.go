@@ -3,6 +3,7 @@ package phrases_generator
 import (
 	"fmt"
 	"github.com/azzzak/alice"
+	"github.com/gorilla/mux"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,6 +20,10 @@ type PhrasesGenerator struct {
 	states map[string]State
 	mux    sync.Mutex
 	apiUrl string
+}
+
+func (v PhrasesGenerator) ApiHandlers(router *mux.Router) {
+	// no implementation here
 }
 
 type State struct {

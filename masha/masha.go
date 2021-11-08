@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/azzzak/alice"
+	"github.com/gorilla/mux"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -35,6 +36,10 @@ var stupidUrl = common.GetEnv("MASHA_STUPID_URL", "")
 type Masha struct {
 	mashaUrl   string
 	httpClient http.Client
+}
+
+func (v Masha) ApiHandlers(router *mux.Router) {
+	// no implementation here
 }
 
 func NewMasha(timeout time.Duration) Masha {
