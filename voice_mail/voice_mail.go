@@ -386,7 +386,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				// for my token phrase
 				if containsIgnoreCase(request.Text(), myTokenWords) {
 					response.Text(fmt.Sprintf("Ваш токен: \n%s", currentUser.Id))
-					response.Button("Перейти", currentUser.Id, false)
+					response.Button("Перейти, чтобы скопировать", "https://yandex.ru/search/?text="+currentUser.Id, false)
 					response.Button("Отправить", "", true)
 					response.Button("Проверить почту", "", true)
 					response.Button("Выйти", "", true)
