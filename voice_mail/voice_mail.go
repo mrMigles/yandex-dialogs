@@ -35,7 +35,7 @@ var checkMailWords = []string{"открой почту", "сообщения", "
 var blackListWords = []string{"забань", "добавь в черный список", "черный список", "чёрный список"}
 var clearBlackListWords = []string{"очистить черный список", "очисти черный список", "очисть черный список", "очистить чёрный список"}
 var myNumberWords = []string{"мой номер", "какой номер", "меня номер"}
-var myTokenWords = []string{"токен", "секрет", "пароль"}
+var myTokenWords = []string{"токен", "секрет", "пароль", "токинг", "такен"}
 var reviewWords = []string{"отзыв", "предложение", "оценк"}
 var datingWords = []string{"знаком", "случайн", "рандом", "наугад"}
 
@@ -386,6 +386,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				// for my token phrase
 				if containsIgnoreCase(request.Text(), myTokenWords) {
 					response.Text(fmt.Sprintf("Ваш токен: \n%s", currentUser.Id))
+					response.Button("Перейти", currentUser.Id, false)
 					response.Button("Отправить", "", true)
 					response.Button("Проверить почту", "", true)
 					response.Button("Выйти", "", true)
@@ -530,6 +531,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Button("Дальше", "", true)
 					response.Button("Ответить", "", true)
 					response.Button("В черный список", "", true)
+					response.Button("Отмена", "", true)
 					return response
 				}
 
@@ -587,6 +589,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Button("Дальше", "", true)
 					response.Button("Ответить", "", true)
 					response.Button("В черный список", "", true)
+					response.Button("Отмена", "", true)
 					return response
 				}
 
@@ -602,6 +605,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Button("Дальше", "", true)
 					response.Button("Ответить", "", true)
 					response.Button("В черный список", "", true)
+					response.Button("Отмена", "", true)
 					return response
 				}
 
@@ -667,6 +671,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 				response.Text("Вы можете ответить на это сообщение, сказав - ответить, или продолжить слушать сообщения, просто ответив - дальше. \nТакже, вы можете забанить отправителя сообщения и добавить его в черный список, просто сказав - забанить")
 				response.Button("Дальше", "", true)
 				response.Button("Ответить", "", true)
+				response.Button("Отмена", "", true)
 				return response
 			}
 			if currentState.state == "ask_after_black_list" {
@@ -685,6 +690,7 @@ func (v VoiceMail) HandleRequest() func(request *alice.Request, response *alice.
 					response.Button("Дальше", "", true)
 					response.Button("Ответить", "", true)
 					response.Button("В черный список", "", true)
+					response.Button("Отмена", "", true)
 					return response
 				}
 
