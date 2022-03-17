@@ -990,12 +990,8 @@ func (v VoiceMail) generateNumber(userId string) (int, error) {
 	rand.Seed(int64(hash(userId)))
 	number := 1000 + rand.Intn(9999-1000)
 	defer v.mux.Unlock()
-	number, err, done := v.mailService.checkAndGenerateId(number)
-	if done {
-		return number, err
-	}
 	number = 10000 + rand.Intn(99999-10000)
-	number, err, done = v.mailService.checkAndGenerateId(number)
+	number, err, done := v.mailService.checkAndGenerateId(number)
 	if done {
 		return number, err
 	}
